@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>纸上江山 - 下载中心</title>
   <style>
-    /* ========== Reset & Base ========== */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     html { font-size: 16px; scroll-behavior: smooth; }
     body {
@@ -21,8 +20,6 @@
       position: relative;
       overflow-x: hidden;
     }
-
-    /* ========== 背景粒子装饰 ========== */
     body::before {
       content: '';
       position: fixed;
@@ -38,8 +35,6 @@
       pointer-events: none;
       z-index: 0;
     }
-
-    /* ========== 主容器 ========== */
     .container {
       position: relative;
       z-index: 1;
@@ -47,11 +42,7 @@
       max-width: 800px;
       text-align: center;
     }
-
-    /* ========== 标题区域 ========== */
-    .header {
-      margin-bottom: 50px;
-    }
+    .header { margin-bottom: 50px; }
     .header .logo {
       font-size: 48px;
       font-weight: 900;
@@ -60,7 +51,6 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      text-shadow: none;
       filter: drop-shadow(0 2px 8px rgba(231,198,110,0.3));
       margin-bottom: 10px;
     }
@@ -86,14 +76,12 @@
       letter-spacing: 1px;
     }
 
-    /* ========== 下载卡片区域 ========== */
     .download-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 24px;
       margin-bottom: 40px;
     }
-
     .download-card {
       background: linear-gradient(145deg, rgba(30,30,60,0.85), rgba(20,20,50,0.9));
       border: 1px solid rgba(255,215,140,0.15);
@@ -118,13 +106,10 @@
       border-color: rgba(255,215,140,0.4);
       box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 20px rgba(231,198,110,0.05);
     }
-    .download-card:hover::before {
-      opacity: 1;
-    }
+    .download-card:hover::before { opacity: 1; }
 
     .download-card .icon-wrap {
-      width: 72px;
-      height: 72px;
+      width: 72px; height: 72px;
       margin: 0 auto 16px;
       border-radius: 18px;
       display: flex;
@@ -135,14 +120,11 @@
     .download-card .icon-wrap.apk {
       background: linear-gradient(135deg, #e74c3c22, #e74c3c11);
       border: 1px solid rgba(231,76,60,0.3);
-      color: #e74c3c;
     }
-    .download-card .icon-wrap.html {
+    .download-card .icon-wrap.web {
       background: linear-gradient(135deg, #3498db22, #3498db11);
       border: 1px solid rgba(52,152,219,0.3);
-      color: #3498db;
     }
-
     .download-card h3 {
       font-size: 22px;
       font-weight: 700;
@@ -170,7 +152,6 @@
       border-radius: 8px;
     }
 
-    /* ========== 下载按钮 ========== */
     .btn-download {
       display: inline-flex;
       align-items: center;
@@ -203,23 +184,18 @@
       transform: translateY(-2px);
       box-shadow: 0 6px 24px rgba(231,76,60,0.45);
     }
-    .btn-download.html {
+    .btn-download.web {
       background: linear-gradient(135deg, #3498db, #2980b9);
       color: #fff;
       box-shadow: 0 4px 16px rgba(52,152,219,0.3);
     }
-    .btn-download.html:hover {
+    .btn-download.web:hover {
       transform: translateY(-2px);
       box-shadow: 0 6px 24px rgba(52,152,219,0.45);
     }
-    .btn-download .arrow {
-      transition: transform 0.25s ease;
-    }
-    .btn-download:hover .arrow {
-      transform: translateX(3px);
-    }
+    .btn-download .arrow { transition: transform 0.25s ease; }
+    .btn-download:hover .arrow { transform: translateX(3px); }
 
-    /* ========== 使用说明 ========== */
     .instructions {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,215,140,0.08);
@@ -240,10 +216,7 @@
       color: #8a7e6a;
       line-height: 1.8;
     }
-    .instructions ul {
-      list-style: none;
-      padding: 0;
-    }
+    .instructions ul { list-style: none; padding: 0; }
     .instructions li {
       padding-left: 20px;
       position: relative;
@@ -258,7 +231,6 @@
       top: 3px;
     }
 
-    /* ========== Footer ========== */
     .footer {
       margin-top: 50px;
       padding-top: 20px;
@@ -272,64 +244,37 @@
       text-decoration: none;
       transition: color 0.2s;
     }
-    .footer a:hover {
-      color: #c9b08a;
-    }
+    .footer a:hover { color: #c9b08a; }
 
-    /* ========== 动画 ========== */
     @keyframes fadeInUp {
       from { opacity: 0; transform: translateY(20px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .container > * {
-      animation: fadeInUp 0.6s ease forwards;
-      opacity: 0;
-    }
-    .header       { animation-delay: 0.1s; }
+    .container > * { animation: fadeInUp 0.6s ease forwards; opacity: 0; }
+    .header        { animation-delay: 0.1s; }
     .download-grid { animation-delay: 0.2s; }
-    .instructions { animation-delay: 0.3s; }
-    .footer       { animation-delay: 0.4s; }
+    .instructions  { animation-delay: 0.3s; }
+    .footer        { animation-delay: 0.4s; }
 
-    /* ========== 响应式 ========== */
     @media (max-width: 640px) {
       .download-grid { grid-template-columns: 1fr; }
       .header .logo { font-size: 36px; letter-spacing: 4px; }
       .header .subtitle { font-size: 13px; letter-spacing: 2px; padding: 6px 16px; }
       .download-card { padding: 28px 18px 22px; }
     }
-
-    /* ========== 下载计数 ========== */
-    .count-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,215,140,0.1);
-      border-radius: 6px;
-      padding: 2px 8px;
-      font-size: 11px;
-      color: #6a5e4a;
-      cursor: default;
-    }
   </style>
 </head>
 <body>
 <div class="container">
 
-  <!-- 标题 -->
   <header class="header">
     <div class="logo">纸上江山</div>
-    <div class="subtitle">战 棋 对 弈</div>
+    <div class="subtitle">下 载 中 心</div>
     <div class="version-tag">最新版本 v1.3.2</div>
   </header>
 
-  <!-- 装饰图片区域 -->
-  <!-- 以后有游戏截图可以放这里 -->
-
-  <!-- 下载卡片 -->
   <div class="download-grid">
 
-    <!-- Android APK -->
     <div class="download-card">
       <div class="icon-wrap apk">📱</div>
       <h3>Android 版</h3>
@@ -344,40 +289,37 @@
       </a>
     </div>
 
-    <!-- HTML 网页版 -->
     <div class="download-card">
-      <div class="icon-wrap html">🌐</div>
+      <div class="icon-wrap web">🌐</div>
       <h3>网页版</h3>
-      <p class="desc">无需安装，浏览器打开即可游玩</p>
+      <p class="desc">无需安装，直接打开即可游玩</p>
       <div class="info-row">
-        <span>格式: .html</span>
-        <span>版本: v1.3.2</span>
+        <span>在线即玩</span>
+        <span>免下载</span>
       </div>
-      <a class="btn-download html" href="game.html" target="_blank">
-        打开网页版
+      <a class="btn-download web" href="https://lin-hanyu.github.io" target="_blank">
+        在线游玩
         <span class="arrow">→</span>
       </a>
     </div>
 
   </div>
 
-  <!-- 使用说明 -->
   <div class="instructions">
     <h4>📋 使用说明</h4>
     <ul>
       <li><strong>Android 版</strong>：下载 APK 后，在手机上打开安装即可。若提示"未知来源"，请允许安装。</li>
-      <li><strong>网页版</strong>：点击"打开网页版"即可在浏览器中直接游玩，支持电脑和手机浏览器。</li>
+      <li><strong>网页版</strong>：点击"在线游玩"或直接访问 <strong>lin-hanyu.github.io</strong> 即可在浏览器中游玩。</li>
       <li><strong>反馈建议</strong>：如有问题或建议，欢迎在 GitHub 提交 Issue。</li>
     </ul>
   </div>
 
-  <!-- Footer -->
   <div class="footer">
     <a href="https://github.com/Lin-hanyu/paperword.github.io" target="_blank">GitHub 仓库</a>
     &nbsp;·&nbsp;
     纸上江山 &copy; 2026
     &nbsp;·&nbsp;
-    <span class="count-badge">⚔️ 纸上谈兵，指尖江山</span>
+    <span style="color:#5a4e3a;">⚔️ 纸上谈兵，指尖江山</span>
   </div>
 
 </div>
