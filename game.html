@@ -1,0 +1,4959 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="纸上江山">
+<meta name="theme-color" content="#FCF9F2">
+<title>纸上江山 - 局域网联机</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #FCF9F2;
+    overflow: hidden;
+    font-family: 'Microsoft YaHei', sans-serif;
+    height: 100%;
+  }
+  #gameContainer {
+    position: relative;
+    width: 100vw;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: none;
+  }
+  #canvasWrap { position: relative; flex: 1 1 auto; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #FCF9F2; }
+  canvas { display: block; cursor: crosshair; max-width: 100%; max-height: 100%; }
+  #topBar {
+    flex: 0 0 auto;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    padding: 6px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    z-index: 50;
+    position: relative;
+  }
+  #topBar .playerInfo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #topBar .colorDot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    border: 2px solid white;
+  }
+  #bottomBar {
+    flex: 0 0 auto;
+    background: rgba(0,0,0,0.85);
+    padding: 6px 10px;
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    justify-content: center;
+    z-index: 50;
+    position: relative;
+  }
+  .btn {
+    padding: 6px 12px;
+    border: 2px solid #888;
+    background: #34495e;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    font-weight: bold;
+    min-width: 60px;
+  }
+  .btn:hover { background: #4a6278; border-color: #aaa; transform: scale(1.05); }
+  .btn.active { background: #e74c3c; border-color: #c0392b; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.selected { background: #e74c3c; border-color: #c0392b; transform: scale(1.1); box-shadow: 0 0 10px rgba(231,76,60,0.5); }
+
+  /* ==================== 主菜单古代战争风格 ==================== */
+  @font-face {
+    font-family: 'Ancient';
+    src: local('KaiTi'), local('STKaiti'), local('SimSun');
+  }
+  #playerSelectOverlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  #modeSelectScreen {
+    position: relative; z-index: 1;
+    text-align: center;
+    background: rgba(252, 249, 242, 0.9);
+    padding: 40px 60px;
+    border-radius: 8px;
+    border: 1px solid rgba(139, 115, 85, 0.3);
+  }
+
+  /* 标题 */
+  #modeSelectScreen h1 {
+    font-family: 'Ancient', 'KaiTi', 'STKaiti', serif;
+    font-size: 56px;
+    font-weight: bold;
+    letter-spacing: 8px;
+    color: #4a3520;
+    margin-bottom: 50px;
+    user-select: none;
+    animation: breathe 3s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+
+  .mode-select-group {
+    position: relative; z-index: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin: 0;
+  }
+  .mode-btn {
+    position: relative;
+    width: 320px; height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #8b7355 !important;
+    border-radius: 6px !important;
+    background: #f5f0e8 !important;
+    cursor: pointer;
+    font-family: 'Ancient', 'KaiTi', 'STKaiti', serif !important;
+    user-select: none;
+  }
+  .mode-btn::before {
+    content: '';
+    position: absolute; inset: -1px;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 7px;
+    pointer-events: none;
+  }
+  .mode-btn:hover {
+    border-color: #5a4a3a !important;
+    background: #ede5d5 !important;
+    transform: scale(1.02);
+  }
+  .mode-icon {
+    font-size: 28px !important;
+    margin-right: 12px;
+  }
+  .mode-title {
+    font-family: 'Ancient', 'KaiTi', 'STKaiti', serif !important;
+    font-size: 24px !important;
+    font-weight: bold;
+    color: #4a3520 !important;
+    letter-spacing: 4px;
+  }
+  .mode-desc { display: none !important; }
+
+  /* 子画面（本地设置/AI设置/联机大厅）— 统一风格 */
+  #localSetupScreen, #aiSetupScreen, #onlineLobbyScreen {
+    position: relative; z-index: 1;
+    text-align: center;
+    background: rgba(252, 249, 242, 0.9);
+    padding: 30px 50px;
+    border-radius: 6px;
+    border: 1px solid rgba(139, 115, 85, 0.3);
+  }
+  #localSetupScreen h1, #aiSetupScreen h1, #onlineLobbyScreen h1 {
+    font-family: 'Ancient', 'KaiTi', 'STKaiti', serif;
+    font-size: 28px;
+    color: #4a3520;
+    letter-spacing: 4px;
+    margin-bottom: 6px;
+  }
+  #localSetupScreen p, #aiSetupScreen p, #onlineLobbyScreen p {
+    color: #6b5a4a !important;
+    font-size: 14px !important;
+    font-family: 'Ancient', 'KaiTi', 'STKaiti', serif !important;
+  }
+  #playerSelectOverlay .subtitle {
+    color: #a08050 !important;
+    font-size: 14px !important;
+  }
+  .player-count-group .btn, .btn-sm {
+    font-family: 'Ancient', 'KaiTi', 'STKaiti', serif !important;
+    font-size: 17px !important;
+    letter-spacing: 2px;
+    background: #f5f0e8 !important;
+    border: 1px solid #b8a890 !important;
+    color: #4a3520 !important;
+    border-radius: 4px !important;
+    padding: 8px 22px !important;
+    transition: all 0.15s;
+    min-width: auto !important;
+    cursor: pointer !important;
+  }
+  .player-count-group .btn:hover, .btn-sm:hover {
+    border-color: #8b7355 !important;
+    background: #ede5d5 !important;
+    color: #2a1a0a !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  .player-count-group .btn.selected {
+    background: #e0d5c0 !important;
+    border-color: #6b5a4a !important;
+    color: #1a0a00 !important;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+  }
+  .btn-start, #btnStartGame {
+    font-family: 'Ancient', 'KaiTi', 'STKaiti', serif !important;
+    font-size: 19px !important;
+    letter-spacing: 3px;
+    background: #e8dcc8 !important;
+    border: 1px solid #8b7355 !important;
+    color: #4a3520 !important;
+    border-radius: 4px !important;
+    padding: 10px 34px !important;
+    transition: all 0.15s;
+    cursor: pointer !important;
+    box-shadow: 1px 2px 4px rgba(0,0,0,0.1);
+  }
+  .btn-start:hover, #btnStartGame:hover {
+    background: #dfd0b8 !important;
+    color: #2a1a0a !important;
+    border-color: #5a4a3a !important;
+    box-shadow: 2px 3px 8px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+  }
+  .btn-copy {
+    font-family: 'Ancient', 'KaiTi', 'STKaiti', serif !important;
+    font-size: 14px !important;
+    letter-spacing: 1px;
+    background: #d4c5a9 !important;
+    border: 1px solid #8b7355 !important;
+    color: #3a2a1a !important;
+    border-radius: 3px !important;
+    padding: 6px 16px !important;
+    cursor: pointer !important;
+  }
+  .btn-copy:hover {
+    background: #c8b896 !important;
+    color: #1a0a00 !important;
+  }
+  .btn-back {
+    font-family: 'Ancient', 'KaiTi', 'STKaiti', serif !important;
+    font-size: 15px !important;
+    letter-spacing: 2px;
+    background: #f0ebe0 !important;
+    border: 1px solid #c8b8a0 !important;
+    color: #6b5a4a !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    min-width: auto !important;
+  }
+  .btn-back:hover {
+    border-color: #8b7355 !important;
+    color: #3a2a1a !important;
+  }
+  .setup-desc { color: #6b5a4a !important; text-align: center; }
+  .room-code {
+    font-family: 'Courier New', monospace !important;
+    color: #4a3520 !important;
+    text-align: center;
+  }
+  #onlineLobbyScreen input[type=text]:focus {
+    border-color: #6b5a4a !important;
+    box-shadow: 0 0 6px rgba(100,80,60,0.2);
+  }
+  .lobby-status { color: #6b5a4a !important; text-align: center; }
+
+  /* 移动端适配：菜单 */
+  @media (max-width: 768px), (max-height: 600px), (orientation: portrait) {
+    #modeSelectScreen h1 { font-size: 32px !important; margin-bottom: 24px !important; letter-spacing: 8px; padding: 8px 30px !important; }
+    .mode-btn { width: 200px !important; height: 64px !important; gap: 12px; }
+    .mode-icon { font-size: 28px !important; }
+    .mode-title { font-size: 18px !important; letter-spacing: 3px; }
+  }
+
+  /* 放置皇帝提示 - 附着在顶部栏下面，不拦截点击 */
+  #emperorPrompt {
+    position: absolute;
+    top: 36px; /* topBar 高度之后 */
+    left: 0; width: 100%;
+    background: rgba(50, 40, 20, 0.82);
+    padding: 6px 15px;
+    color: white;
+    text-align: center;
+    z-index: 49;
+    display: none;
+    border-bottom: 1px solid rgba(255,200,80,0.3);
+    pointer-events: none; /* 完全透明，不拦截任何点击 */
+  }
+  #emperorPrompt h2 { font-size: 15px; display: inline; margin-right: 10px; }
+  #emperorPrompt p { font-size: 14px; display: inline; color: #ffd; }
+
+  #gameOverOverlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    z-index: 100;
+    border-radius: 5px;
+  }
+  #gameOverOverlay h1 { font-size: 36px; margin-bottom: 15px; }
+
+  /* ==================== 移动端适配 ==================== */
+  @media (max-width: 768px), (max-height: 600px), (orientation: portrait) {
+    #gameContainer { width: 100vw !important; height: 100% !important; display: flex !important; flex-direction: column !important; }
+    #canvasWrap { flex: 1 1 auto !important; min-height: 0 !important; display: flex !important; align-items: center !important; justify-content: center !important; overflow: hidden !important; }
+    #topBar { padding: 4px 8px !important; font-size: 11px !important; }
+    #topBar .colorDot { width: 12px !important; height: 12px !important; }
+    #bottomBar { padding: 3px 4px !important; gap: 2px !important; flex-wrap: wrap !important; }
+    .btn { font-size: 11px !important; padding: 5px 7px !important; min-width: auto !important; border-radius: 3px !important; }
+    #btnQuit { padding: 5px 10px !important; }
+    #emperorPrompt { top: 32px !important; padding: 5px 10px !important; }
+    #emperorPrompt h2 { font-size: 13px !important; }
+    #emperorPrompt p { font-size: 12px !important; }
+    #playerSelectOverlay h1 { font-size: 32px !important; margin-top: 40px !important; }
+    .player-count-group .btn { font-size: 16px !important; padding: 10px 20px !important; }
+    #modeSelectScreen h1 { font-size: 32px !important; margin-bottom: 24px !important; letter-spacing: 8px; }
+    .mode-select-group { flex-direction: column !important; align-items: center !important; gap: 12px !important; }
+    .mode-btn { width: 200px !important; height: 56px !important; padding: 0 20px !important; }
+    .mode-icon { font-size: 28px !important; margin-right: 10px !important; }
+    .mode-title { font-size: 16px !important; letter-spacing: 2px !important; }
+    .btn-start { font-size: 15px !important; padding: 10px 28px !important; }
+    .setup-desc { font-size: 12px !important; }
+    #aiThinkingOverlay { top: 30px !important; bottom: 42px !important; }
+    #aiLog { width: 150px !important; right: 2px !important; max-height: 200px !important; font-size: 10px !important; }
+    #aiLogBody { max-height: 170px !important; }
+    #editorBar .ed-tool { font-size: 10px !important; padding: 3px 5px !important; }
+  }
+
+  /* AI 日志面板 */
+  #aiLog {
+    position: absolute;
+    top: 36px;
+    right: 5px;
+    width: 200px;
+    max-height: 300px;
+    background: rgba(0,0,0,0.85);
+    border: 1px solid #555;
+    border-radius: 6px;
+    z-index: 55;
+    font-size: 11px;
+    color: #ccc;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #aiLogHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 8px;
+    background: rgba(255,255,255,0.1);
+    cursor: pointer;
+    font-weight: bold;
+    color: #ffd700;
+    font-size: 12px;
+    user-select: none;
+  }
+  #aiLogToggle { font-size: 10px; }
+  #aiLogBody {
+    padding: 4px 8px;
+    overflow-y: auto;
+    max-height: 270px;
+    line-height: 1.5;
+  }
+  #aiLogBody .log-entry { margin-bottom: 3px; padding-bottom: 3px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  #aiLogBody .log-time { color: #666; font-size: 10px; }
+  #aiLogBody .log-ok { color: #5f5; }
+  #aiLogBody .log-err { color: #f55; }
+  #aiLogBody .log-info { color: #5af; }
+  #aiLogBody .log-warn { color: #fa5; }
+
+  /* 触摸提示 */
+  #touchHint {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    z-index: 100;
+    display: none;
+    pointer-events: none;
+  }
+  /* 联机大厅 */
+  #onlineLobbyScreen { text-align: center; }
+  #onlineLobbyScreen h1 { font-size: 28px; margin-bottom: 6px; }
+  #onlineLobbyScreen p { font-size: 14px; color: #4a3520; margin-bottom: 14px; }
+  #onlineLobbyScreen input[type=text] {
+    background: #f5f0e8; border: 1px solid #b8a890;
+    color: #222; caret-color: #222; padding: 8px 14px; border-radius: 6px; font-size: 15px;
+    text-align: center; width: 160px; margin: 4px; outline: none;
+  }
+  #onlineLobbyScreen input[type=text]::placeholder { color: #999; }
+  #onlineLobbyScreen input[type=text]:focus { border-color: #6b5a4a !important; }
+  .room-code { font-size: 36px!important; font-weight: 900; color: #4a3520 !important;
+    letter-spacing: 8px; margin: 16px 0; font-family: monospace; }
+  .lobby-status { color: #4a3520; font-size: 13px; margin: 10px 0; min-height: 20px; }
+  .btn-sm { font-size: 13px; padding: 6px 16px; margin: 6px; }
+  .ed-tool {
+    font-family: 'Microsoft YaHei', sans-serif !important;
+    font-size: 12px !important;
+    padding: 4px 7px !important;
+    border: 1px solid #666 !important;
+    border-radius: 5px !important;
+    background: #e8dcc8;
+    color: #333;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .ed-tool.active { border-color: #e67e22 !important; background: #f5d6a8 !important; box-shadow: 0 0 8px #e67e22; }
+  .btn-map-edit {
+    font-family: 'Microsoft YaHei', sans-serif !important;
+    font-size: 12px !important;
+    letter-spacing: 0px !important;
+    background: #b8a080 !important;
+    border: 1px solid #8b7355 !important;
+    color: #3a2a1a !important;
+    border-radius: 3px !important;
+    padding: 4px 8px !important;
+  }
+  #editorBar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: none; background: #e0d5c0; border-top: 1px solid #8b7355;
+    padding: 4px 6px; z-index: 9999; align-items: center;
+    flex-wrap: wrap; justify-content: center; gap: 3px;
+  }
+  #editorBar.show { display: flex; }
+</style>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+</head>
+<body>
+
+<div id="gameContainer">
+  <div id="canvasWrap"><canvas id="gameCanvas" width="1200" height="750"></canvas></div>
+
+  <!-- 主菜单：模式选择 -->
+  <div id="playerSelectOverlay" style="display:flex;">
+    <!-- 模式选择画面 -->
+    <div id="modeSelectScreen">
+      <h1>纸上江山</h1>
+      <div class="mode-select-group">
+        <button class="btn mode-btn" onclick="game.selectGameMode('local')">
+          <span class="mode-icon">⚔</span>
+          <span class="mode-title">本地对战</span>
+        </button>
+        <button class="btn mode-btn" onclick="game.selectGameMode('ai')">
+          <span class="mode-icon">🤖</span>
+          <span class="mode-title">AI对战</span>
+        </button>
+        <button class="btn mode-btn" onclick="game.selectGameMode('online')">
+          <span class="mode-icon">🏠</span>
+          <span class="mode-title">局域网联机</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 本地对战设置 -->
+    <div id="localSetupScreen" style="display:none;">
+      <h1>本地对战</h1>
+      <p>选择玩家人数</p>
+      <div class="player-count-group">
+        <button class="btn" id="pc2" onclick="game.selectPlayerCount(2)">2 人</button>
+        <button class="btn" id="pc3" onclick="game.selectPlayerCount(3)">3 人</button>
+        <button class="btn" id="pc4" onclick="game.selectPlayerCount(4)">4 人</button>
+      </div>
+      <br>
+      <button class="btn btn-back" onclick="game.backToModeSelect()">返回</button>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-start" onclick="game.startGame()">开始游戏</button>
+        <button class="btn btn-start btn-map-edit" onclick="game.openMapEditor()">🗺 绘制</button>
+      </div>
+    </div>
+
+    <!-- AI 对战设置 -->
+    <div id="aiSetupScreen" style="display:none;">
+      <h1>AI 对战</h1>
+      <p>选择人类玩家数量</p>
+      <div class="player-count-group" id="humanCountGroup">
+        <button class="btn" id="pc1_ai" onclick="game.selectAIHumanCount(1)">1 人</button>
+        <button class="btn" id="pc2_ai" onclick="game.selectAIHumanCount(2)">2 人</button>
+        <button class="btn" id="pc3_ai" onclick="game.selectAIHumanCount(3)">3 人</button>
+      </div>
+      <p>选择 AI 对手数量</p>
+      <div class="player-count-group" id="aiCountGroup">
+        <button class="btn" id="ai1" onclick="game.selectAICount(1)">1 AI</button>
+        <button class="btn" id="ai2" onclick="game.selectAICount(2)">2 AI</button>
+        <button class="btn" id="ai3" onclick="game.selectAICount(3)">3 AI</button>
+      </div>
+      <p id="aiSetupDesc"></p>
+      <br>
+      <button class="btn btn-back" onclick="game.backToModeSelect()">返回</button>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-start" onclick="game.startGame()">开始游戏</button>
+        <button class="btn btn-start btn-map-edit" onclick="game.openMapEditor()">🗺 绘制</button>
+      </div>
+    </div>
+
+    <!-- 局域网联机大厅 -->
+    <div id="onlineLobbyScreen" style="display:none;">
+      <h1>局域网联机</h1>
+      <!-- 第一步：创建或加入 -->
+      <div id="onlineMainButtons">
+        <button class="btn btn-start" onclick="game.showHostSetup()">创建房间</button>
+        <button class="btn btn-start" onclick="game.showJoinSetup()">加入房间</button>
+        <br>
+        <button class="btn btn-back" onclick="game.backToModeSelect()" style="margin-top:8px;">返回</button>
+      </div>
+      <!-- 第二步：房主设置（昵称+人数） -->
+      <div id="onlineHostSetup" style="display:none;">
+        <p style="font-size:13px;">昵称</p>
+        <input type="text" id="onlineNameInput" placeholder="输入你的昵称" maxlength="6" style="width:140px;padding:5px 10px;font-size:14px;text-align:center;color:#333;background:#f5f0e8;border:1px solid #8b7355;border-radius:4px;">
+        <br><br>
+        <p>选择真人数量</p>
+        <div class="player-count-group" id="onlinePlayerCountGroup">
+          <button class="btn" id="ol2" onclick="game.selectOnlinePlayerCount(2)">2 真人</button>
+          <button class="btn" id="ol3" onclick="game.selectOnlinePlayerCount(3)">3 真人</button>
+          <button class="btn" id="ol4" onclick="game.selectOnlinePlayerCount(4)">4 真人</button>
+        </div>
+        <p>选择 AI 数量</p>
+        <div class="player-count-group" id="onlineAICountGroup">
+          <button class="btn" id="olAI0" onclick="game.selectOnlineAICount(0)">0 AI</button>
+          <button class="btn" id="olAI1" onclick="game.selectOnlineAICount(1)">1 AI</button>
+          <button class="btn" id="olAI2" onclick="game.selectOnlineAICount(2)">2 AI</button>
+          <button class="btn" id="olAI3" onclick="game.selectOnlineAICount(3)">3 AI</button>
+        </div>
+        <p id="onlineSetupDesc" style="font-size:13px;"></p>
+        <div style="display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
+          <button class="btn btn-start" onclick="game.createRoom()">创建</button>
+          <button class="btn btn-map-edit" onclick="game.openMapEditor()" style="background:#5D4E37;border-color:#8B7355;font-size:13px;padding:6px 14px;">🗺 绘制</button>
+        </div>
+        <br>
+        <button class="btn btn-back" onclick="game.leaveLobby()">返回</button>
+      </div>
+      <!-- 第二步：加入者设置（昵称+房间码） -->
+      <div id="onlineJoinSetup" style="display:none;">
+        <p style="font-size:13px;">昵称</p>
+        <input type="text" id="onlineJoinNameInput" placeholder="输入你的昵称" maxlength="6" style="width:140px;padding:5px 10px;font-size:14px;text-align:center;color:#333;background:#f5f0e8;border:1px solid #8b7355;border-radius:4px;">
+        <br><br>
+        <p style="font-size:13px;color:#6b5a4a;">输入4位房间码</p>
+        <input type="text" id="roomCodeInput" placeholder="例如 1234" maxlength="4" inputmode="numeric" style="width:100px;padding:6px 10px;font-size:20px;text-align:center;color:#333;background:#f5f0e8;border:1px solid #8b7355;border-radius:4px;letter-spacing:6px;font-family:monospace;">
+        <br><br>
+        <button class="btn btn-start" onclick="game.joinRoom()">加入</button>
+        <button class="btn btn-back" onclick="game.leaveLobby()">返回</button>
+      </div>
+      <!-- 房间大厅：等待玩家 -->
+      <div id="roomLobbyArea" style="display:none; margin-top:12px;">
+        <p style="font-size:13px;color:#6b5a4a;">房间码</p>
+        <div id="roomCodeDisplay" style="font-size:40px;font-family:monospace;letter-spacing:14px;color:#4a3520;margin:4px 0;">0000</div>
+        <p style="font-size:12px;color:#8b6914;">把房间码发给好友加入</p>
+        <div id="onlinePlayerList" style="font-size:14px;color:#4a3520;margin:8px 0;"></div>
+        <div id="lobbyStatus" class="lobby-status"></div>
+        <br>
+        <button class="btn btn-start" id="btnStartOnline" onclick="game.hostStartGame()" style="display:none;">开始游戏</button>
+        <button class="btn btn-back" onclick="game.leaveLobby()">离开房间</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 地图编辑器工具栏（底部，不遮挡canvas） -->
+  <div id="editorBar" class="editor-bar">
+    <button id="btCity" class="btn ed-tool active" onclick="game.setEditTool('city')">🏙 城</button>
+    <button id="btRiver" class="btn ed-tool" onclick="game.setEditTool('river')">🌊 河</button>
+    <button id="btBridge" class="btn ed-tool" onclick="game.setEditTool('bridge')">🌉 桥</button>
+    <button id="btMtn" class="btn ed-tool" onclick="game.setEditTool('mountain')">⛰ 山</button>
+    <button id="btMtnCity" class="btn ed-tool" onclick="game.setEditTool('mountainCity')">🏔 山城</button>
+    <button class="btn ed-tool" onclick="game.undoEdit()">↩</button>
+    <button class="btn ed-tool" onclick="game.clearEditMap()">🗑</button>
+    <span id="editStats" style="font-size:10px;color:#4a3520;margin:0 4px;">0城</span>
+    <button class="btn ed-tool" onclick="game.closeMapEditor()" style="background:#c0392b;color:#fff;">✕</button>
+    <button class="btn ed-tool" onclick="game.saveCustomMap()" style="background:#27ae60;color:#fff;font-weight:bold;">✓</button>
+  </div>
+
+  <div id="topBar" style="display:none;">
+    <div class="playerInfo">
+      <div class="colorDot" id="currentColorDot"></div>
+      <span id="currentPlayerText">玩家 1 的回合</span>
+    </div>
+    <span id="turnText">第 1 轮</span>
+    <span id="actionText">请选择游戏模式开始游戏</span>
+  </div>
+
+  <div id="bottomBar" style="display:none;">
+    <button class="btn" id="btnTroop" onclick="game.setMode('troop')">出兵</button>
+    <button class="btn" id="btnFactory" onclick="game.setMode('factory')">建工厂</button>
+    <button class="btn" id="btnRope" onclick="game.setMode('rope')">修绳子</button>
+    <button class="btn" id="btnDock" onclick="game.setMode('dock')">修码头</button>
+    <button class="btn" id="btnShip" onclick="game.setMode('ship')">造船</button>
+    <button class="btn" id="btnCannon" onclick="game.setMode('cannon')">修大炮</button>
+    <button class="btn" id="btnWire" onclick="game.setMode('wire')">连引线</button>
+    <button class="btn" id="btnSupply" onclick="game.setMode('supply')">续粮线</button>
+    <button class="btn" id="btnMoveEmperor" onclick="game.setMode('moveEmperor')">移动皇帝</button>
+    <button class="btn" id="btnBurnRope" onclick="game.setMode('burnRope')">烧绳子</button>
+    <button class="btn" id="btnCavalry" onclick="game.setMode('cavalry')" title="点击工厂附近放置骑兵">造骑兵</button>
+    <button class="btn" id="btnAttack" onclick="game.setMode('attack')">开炮</button>
+    <button class="btn" id="btnPan" onclick="game.setMode('pan')" style="background:#5D4E37;border-color:#8B7355">移动地图</button>
+    <button class="btn" id="btnEndTurn" onclick="game.endTurn()">结束回合</button>
+    <button class="btn" id="btnQuit" onclick="game.confirmQuit()" style="background:#8B4513;border-color:#A0522D;display:none">退出</button>
+  </div>
+
+  <!-- 退出确认弹窗 -->
+  <div id="quitConfirmOverlay" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:10000;flex-direction:column;align-items:center;justify-content:center;">
+    <div style="background:#FCF9F2;padding:30px 50px;border:2px solid #8b7355;text-align:center;border-radius:4px;font-family:'Ancient','KaiTi',serif;">
+      <p style="font-size:20px;color:#4a3520;margin-bottom:20px;">确定要退出当前游戏吗？</p>
+      <button class="btn" onclick="game.quitGame()" style="background:#c0392b;border-color:#a93226;margin-right:10px;">确认退出</button>
+      <button class="btn" onclick="game.cancelQuit()">取消</button>
+    </div>
+  </div>
+
+  <!-- AI 日志面板 -->
+  <div id="aiLog" style="display:none;">
+    <div id="aiLogHeader" onclick="game.toggleAILog()">
+      <span>AI 日志</span>
+      <span id="aiLogToggle">▼</span>
+    </div>
+    <div id="aiLogBody"></div>
+  </div>
+
+  <!-- 放置皇帝提示（透明，不拦截点击） -->
+  <div id="emperorPrompt">
+    <h2 id="emperorTitle">纸上江山</h2>
+    <p id="emperorText">玩家 1 (红色) - 请点击一座空城放置皇帝</p>
+  </div>
+
+  <div id="gameOverOverlay">
+    <h1 id="winnerText">游戏结束!</h1>
+    <p id="winnerDesc"></p>
+    <button class="btn" onclick="location.reload()">重新开始</button>
+  </div>
+
+  <!-- AI 思考/运算遮罩 -->
+  <div id="aiThinkingOverlay" style="display:none;">
+    <div class="spinner"></div>
+    <div class="ai-text" id="aiThinkingText">AI 思考中...</div>
+    <div class="ai-sub" id="aiThinkingSub"></div>
+  </div>
+
+  <div id="touchHint">长按拖拽出兵</div>
+</div>
+
+<script>
+// ==================== 移动端检测 ====================
+var _sw = window.innerWidth || screen.width || 375;
+var _sh = window.innerHeight || screen.height || 667;
+var _isMobileDevice = (_sw <= 768) || (_sh > _sw) || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+// ==================== 全屏适配 + 相机缩放 ====================
+function resizeCanvas() {
+  var cv = document.getElementById('gameCanvas');
+  var wrap = document.getElementById('canvasWrap');
+  if (!cv || !wrap) return;
+  var rw = wrap.clientWidth, rh = wrap.clientHeight;
+  if (rw <= 0 || rh <= 0) return;
+  var mapW = CONFIG.MAP_W, mapH = CONFIG.MAP_H;
+  var s = Math.min(rw / mapW, rh / mapH);
+  cv.style.width = (mapW * s) + 'px';
+  cv.style.height = (mapH * s) + 'px';
+}
+window.addEventListener('resize', resizeCanvas);
+window.addEventListener('load', resizeCanvas);
+
+// ==================== 配置 ====================
+const CONFIG = {
+  MAP_W: _isMobileDevice ? 1000 : 1600,
+  MAP_H: _isMobileDevice ? 1600 : 1000,
+  CITY_COUNT: 20, MOUNTAIN_COUNT: 6, RIVER_COUNT: 2,
+  PLAYERS: 4,
+  TROOP_HP: 2, TROOP_ATK: 1,
+  CAVALRY_HP: 2, CAVALRY_ATK: 3,
+  CAVALRY_UNIT_HP: 3,
+  FACTORY_HP: 3,
+  CANNON_HP: 1, CANNON_ATK: 3, CANNON_RANGE: 70,
+  WIRE_HP: 1,
+  SUPPLY_SEGMENTS: 3,
+  SEGMENT_LEN: 40,
+  COLORS: ['#e74c3c', '#3498db', '#2ecc71', '#f39c12'],
+  COLOR_NAMES: ['红色', '蓝色', '绿色', '橙色'],
+  MIN_DIST_CITY: 100,
+  MIN_DIST_MOUNTAIN: 120
+};
+
+// 同步更新 canvas 元素尺寸
+(function updateCanvasSize() {
+  var cv = document.getElementById('gameCanvas');
+  if (cv) {
+    cv.width = CONFIG.MAP_W;
+    cv.height = CONFIG.MAP_H;
+  }
+})();
+
+// ==================== 工具函数 ====================
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function distToPoint(px, py, x, y) { return Math.hypot(px - x, py - y); }
+function lerp(a, b, t) { return a + (b - a) * t; }
+function rand(min, max) { return Math.random() * (max - min) + min; }
+function randInt(min, max) { return Math.floor(rand(min, max)); }
+
+function pointToLineDist(px, py, x1, y1, x2, y2) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return Math.hypot(px - x1, py - y1);
+  let t = ((px - x1) * dx + (py - y1) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+}
+
+function linesIntersect(a1, a2, b1, b2) {
+  const d = (a2.x - a1.x) * (b2.y - b1.y) - (a2.y - a1.y) * (b2.x - b1.x);
+  if (d === 0) return false;
+  const t = ((b1.x - a1.x) * (b2.y - b1.y) - (b1.y - a1.y) * (b2.x - b1.x)) / d;
+  const u = ((b1.x - a1.x) * (a2.y - a1.y) - (b1.y - a1.y) * (a2.x - a1.x)) / d;
+  return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+}
+
+// 线段到圆最近距离：计算线段上最近点到圆心的距离
+function lineCircleMinDist(x1, y1, x2, y2, cx, cy) {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return Math.hypot(x1 - cx, y1 - cy);
+  let t = ((cx - x1) * dx + (cy - y1) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot((x1 + t * dx) - cx, (y1 + t * dy) - cy);
+}
+
+// 整条折线路径是否穿过圆形（线段与圆相交，不只是端点距离）
+function pathTouchesCircle(pts, cx, cy, r) {
+  for (let i = 0; i < pts.length - 1; i++) {
+    if (lineCircleMinDist(pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y, cx, cy) < r) return true;
+  }
+  return false;
+}
+
+function bezierPoint(t, p0, p1, p2, p3) {
+  const u = 1 - t;
+  return {
+    x: u*u*u*p0.x + 3*u*u*t*p1.x + 3*u*t*t*p2.x + t*t*t*p3.x,
+    y: u*u*u*p0.y + 3*u*u*t*p1.y + 3*u*t*t*p2.y + t*t*t*p3.y
+  };
+}
+
+// ===== 手绘风格工具 =====
+function jitter(v, amt) { return v + (Math.random() - 0.5) * amt * 2; }
+function sketchLine(ctx, x1, y1, x2, y2, j) {
+  j = j || 2; ctx.beginPath(); ctx.moveTo(jitter(x1,j), jitter(y1,j));
+  const mx = (x1+x2)/2, my = (y1+y2)/2;
+  ctx.lineTo(jitter(mx,j), jitter(my,j));
+  ctx.lineTo(jitter(x2,j), jitter(y2,j)); ctx.stroke();
+}
+function sketchRect(ctx, x, y, w, h, j) {
+  j = j || 2;
+  ctx.beginPath();
+  ctx.moveTo(jitter(x,j), jitter(y,j));
+  ctx.lineTo(jitter(x+w,j), jitter(y,j));
+  ctx.lineTo(jitter(x+w,j), jitter(y+h,j));
+  ctx.lineTo(jitter(x,j), jitter(y+h,j));
+  ctx.closePath(); ctx.stroke();
+}
+
+function getRiverPoints(river, step = 0.02) {
+  if (river.points) return river.points; // 自定义地图（点列表格式）
+  // 生成地图（贝塞尔格式）
+  const pts = [];
+  for (let t = 0; t <= 1; t += step) pts.push(bezierPoint(t, river.p0, river.p1, river.p2, river.p3));
+  return pts;
+}
+
+function getRiverAngleAt(river, t, offset = 0) {
+  // 返回河流在 t 位置的角度（弧度）
+  if (river.points) {
+    const pts = river.points, len = pts.length;
+    const idx = Math.floor(t * (len - 1));
+    const i = Math.max(0, Math.min(len - 2, idx));
+    const a = pts[i], b = pts[i + 1];
+    return Math.atan2(b.y - a.y, b.x - a.x) + offset;
+  }
+  // 贝塞尔格式
+  const dt = 0.01;
+  const t0 = Math.max(0, t - dt), t1 = Math.min(1, t + dt);
+  const a = bezierPoint(t0, river.p0, river.p1, river.p2, river.p3);
+  const b = bezierPoint(t1, river.p0, river.p1, river.p2, river.p3);
+  return Math.atan2(b.y - a.y, b.x - a.x) + offset;
+}
+
+function pointNearRiver(px, py, river, threshold = 20) {
+  const pts = river.points || getRiverPoints(river, 0.03);
+  for (let i = 0; i < pts.length - 1; i++) {
+    if (pointToLineDist(px, py, pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y) < threshold) return true;
+  }
+  return false;
+}
+
+function mountainNearRiver(points, rivers, threshold = 40) {
+  // 检查山的所有关键点是否离任何河流太近
+  for (const pt of points) {
+    for (const river of rivers) {
+      if (pointNearRiver(pt.x, pt.y, river, threshold)) return true;
+    }
+  }
+  return false;
+}
+
+function pointOnMountain(px, py, mtn) {
+  const pts = mtn.points;
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const xi = pts[i].x, yi = pts[i].y;
+    const xj = pts[j].x, yj = pts[j].y;
+    const intersect = ((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+// ==================== 联机网络层（WebSocket 信令 + 房间码） ====================
+// ==================== 联机网络层（PeerJS 信令，无需服务器） ====================
+class NetworkManager {
+  constructor() {
+    this.myPeer = null;
+    this.myIndex = 0;
+    this.myName = '';
+    this.isHost = false;
+    this.peers = [];           // [{ dc, connected, index }]
+    this.onDataCallback = null;
+    this.onConnectedCallback = null;
+    this.onDisconnectedCallback = null;
+    this.onRoomCreatedCallback = null;
+    this.onPeerJoinedCallback = null;
+    this.onStatusCallback = null;
+  }
+
+  get connectedPeers() {
+    return this.peers.filter(p => p.connected).length;
+  }
+  get totalConnected() {
+    return 1 + this.connectedPeers;
+  }
+
+  _status(msg) {
+    console.log('[net]', msg);
+    if (this.onStatusCallback) this.onStatusCallback(msg);
+  }
+
+  // 房主：创建房间
+  createRoom(code) {
+    this.isHost = true;
+    this.myIndex = 0;
+    this.roomCode = code;
+    this.peerId = 'pw-' + code;
+    this._status('创建房间中...');
+    this.myPeer = new Peer(this.peerId, { debug: 0 });
+    this.myPeer.on('open', () => {
+      this._status('房间已创建');
+      if (this.onRoomCreatedCallback) this.onRoomCreatedCallback(code);
+    });
+    this.myPeer.on('connection', (dc) => {
+      const idx = this.peers.length;
+      const peer = { dc, connected: false, index: idx };
+      this.peers.push(peer);
+      this._setupDC(peer, idx);
+      if (this.onPeerJoinedCallback) this.onPeerJoinedCallback(idx);
+    });
+    this.myPeer.on('error', (err) => {
+      this._status('错误: ' + err.message);
+    });
+  }
+
+  // 加入者：加入房间
+  joinRoom(code) {
+    this.isHost = false;
+    this.myIndex = 0;
+    this.roomCode = code;
+    this.peerId = 'pw-join-' + code + '-' + Date.now();
+    this._status('正在加入...');
+    this.myPeer = new Peer(this.peerId, { debug: 0 });
+    this.myPeer.on('open', () => {
+      this._status('连接房间中...');
+      const dc = this.myPeer.connect('pw-' + code, { reliable: true });
+      const peer = { dc, connected: false, index: 0 };
+      this.peers = [peer];
+      this._setupDC(peer, 0);
+    });
+    this.myPeer.on('error', (err) => {
+      this._status('加入失败: ' + err.message);
+      // 同步到UI
+      const el = document.getElementById('lobbyStatus');
+      if (el) el.textContent = '加入失败: ' + err.message;
+    });
+  }
+
+  _setupDC(peer, idx) {
+    peer.dc.on('open', () => {
+      peer.connected = true;
+      if (this.onConnectedCallback) this.onConnectedCallback(idx);
+      if (!this.isHost && this.onPeerJoinedCallback) this.onPeerJoinedCallback(idx);
+    });
+    peer.dc.on('close', () => {
+      peer.connected = false;
+      if (this.onDisconnectedCallback) this.onDisconnectedCallback(idx);
+    });
+    peer.dc.on('data', (data) => {
+      if (this.onDataCallback) this.onDataCallback(JSON.parse(data), idx);
+    });
+  }
+
+  send(data, excludeIndex) {
+    for (const peer of this.peers) {
+      if (peer.connected && peer.dc && peer.dc.open && peer.index !== excludeIndex) {
+        peer.dc.send(JSON.stringify(data));
+      }
+    }
+  }
+
+  sendTo(data, targetIndex) {
+    const peer = this.peers.find(p => p.index === targetIndex);
+    if (peer && peer.connected && peer.dc && peer.dc.open) {
+      peer.dc.send(JSON.stringify(data));
+    }
+  }
+
+  onConnected(cb) { this.onConnectedCallback = cb; }
+  onData(cb) { this.onDataCallback = cb; }
+  onDisconnected(cb) { this.onDisconnectedCallback = cb; }
+  onRoomCreated(cb) { this.onRoomCreatedCallback = cb; }
+  onPeerJoined(cb) { this.onPeerJoinedCallback = cb; }
+  onStatus(cb) { this.onStatusCallback = cb; }
+
+  disconnect() {
+    for (const peer of this.peers) {
+      if (peer.dc) peer.dc.close();
+    }
+    this.peers = [];
+    if (this.myPeer) { this.myPeer.destroy(); this.myPeer = null; }
+  }
+}
+
+// ==================== 游戏类 ====================
+class Game {
+  constructor() {
+    this.canvas = document.getElementById('gameCanvas');
+    // 运行时检测：竖屏就交换（APK环境中更可靠）
+    var _w = window.innerWidth || screen.width || 375;
+    var _h = window.innerHeight || screen.height || 667;
+    if (_h > _w && CONFIG.MAP_W > CONFIG.MAP_H) {
+      var tmp = CONFIG.MAP_W; CONFIG.MAP_W = CONFIG.MAP_H; CONFIG.MAP_H = tmp;
+    } else if (_w > _h && CONFIG.MAP_W < CONFIG.MAP_H) {
+      var tmp = CONFIG.MAP_W; CONFIG.MAP_W = CONFIG.MAP_H; CONFIG.MAP_H = tmp;
+    }
+    this.canvas.width = CONFIG.MAP_W;
+    this.canvas.height = CONFIG.MAP_H;
+    this.ctx = this.canvas.getContext('2d');
+    this.state = 'menu'; // menu, setup, playing, gameover
+    this.players = [];
+    this.selectedPlayerCount = 4;
+    this.currentPlayer = 0;
+    this.turn = 1;
+    this.mode = null;
+    this.setupPlayer = 0;
+
+    this.cities = [];
+    this.mountains = [];
+    this.rivers = [];
+    this.troops = [];
+    this.factories = [];
+    this.docks = [];
+    this.ships = [];
+    this.cannons = [];
+    this.cavalryUnits = []; // 骑兵单位：放置在马背上，出兵从下方圆点出发
+    this.ropes = [];
+    this.supplyLines = [];
+    this.wires = [];  // 引线：工厂↔大炮，有1滴血
+    this.factoryId = 0;
+    this.cannonId = 0;
+    this.cavalryId = 0;
+    this.wireId = 0;
+
+    this.dragStart = null;
+    this.dragCurrent = null;
+    this.supplyDragPoints = null;
+    this.selectedCity = null;
+    this.selectedBuilding = null;
+    this.selectedCannon = null;
+    this.combatEvents = []; // 战斗事件用于可视化
+
+    // === AI 对战模式 ===
+    this.gameMode = 'local'; // 'local' | 'ai' | 'online'
+    this.humanPlayerCount = 1;
+    this.aiPlayer = null;
+    this.aiThinking = false;
+    this.aiHighlightTarget = null;
+    this.aiAnimFrame = null;
+    this.aiLogVisible = true;
+    this.aiLogEntries = [];
+
+    // === 联机对战 ===
+    this.network = null;
+    this.myPlayerIndex = 0; // 本地玩家在players数组中的索引
+    this._onlineMapReceived = false;
+    this._onlineGameStarted = false;
+    this._isRemoteAction = false; // 标记是否在处理远程动作
+
+    // 移动端相关：与 _isMobileDevice 保持一致
+    this.isMobile = _isMobileDevice;
+    this.touchState = {
+      active: false,
+      startX: 0,
+      startY: 0,
+      startTime: 0,
+      isLongPress: false,
+      touchId: null
+    };
+    this.LONG_PRESS_DURATION = 300;
+    this.LONG_PRESS_MOVE_THRESHOLD = 10;
+
+    // === 相机缩放/平移 ===
+    this.camera = { x: 0, y: 0, zoom: 1 };
+    this.isPanning = false;
+    this.panStart = { x: 0, y: 0 };
+    this._emperorDragStart = null;
+    this.pinchStartDist = 0;
+    this.pinchStartZoom = 1;
+    this._lastMidX = 0;
+    this._lastMidY = 0;
+
+    // 缩放提示
+    this._zoomHintTimer = null;
+    this._showZoomHint = false;
+    this.longPressTimer = null;
+
+    // 阻止默认触摸行为
+    if (this.isMobile) {
+      this.canvas.style.touchAction = 'none';
+      document.body.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+    }
+
+    this.bindEvents();
+    resizeCanvas();
+    this.renderMenu();
+    this._jitterTimer = setInterval(() => {
+      if (this.state === 'playing') this.render();
+    }, 500);
+  }
+
+  selectPlayerCount(n) {
+    this.selectedPlayerCount = n;
+    document.querySelectorAll('#localSetupScreen .player-count-group .btn').forEach(b => b.classList.remove('selected'));
+    const btn = document.getElementById('pc' + n);
+    if (btn) btn.classList.add('selected');
+  }
+
+  selectGameMode(mode) {
+    this.gameMode = mode;
+    document.getElementById('modeSelectScreen').style.display = 'none';
+    if (mode === 'local') {
+      document.getElementById('localSetupScreen').style.display = 'block';
+      this.selectedPlayerCount = 4;
+      this.selectPlayerCount(4);
+    } else if (mode === 'ai') {
+      document.getElementById('aiSetupScreen').style.display = 'block';
+      this.selectAIHumanCount(1);
+    } else if (mode === 'online') {
+      document.getElementById('onlineLobbyScreen').style.display = 'block';
+      document.getElementById('onlineMainButtons').style.display = '';
+      document.getElementById('onlineHostSetup').style.display = 'none';
+      document.getElementById('onlineJoinSetup').style.display = 'none';
+      document.getElementById('roomLobbyArea').style.display = 'none';
+      this.onlineTotalPlayers = 2;
+      this.onlineAICount = 0;
+      this.selectOnlinePlayerCount(2);
+      this.selectOnlineAICount(0);
+    }
+  }
+
+  selectOnlinePlayerCount(n) {
+    this.onlineTotalPlayers = n;
+    document.querySelectorAll('#onlinePlayerCountGroup .btn').forEach(b => b.classList.remove('selected'));
+    const btn = document.getElementById('ol' + n);
+    if (btn) btn.classList.add('selected');
+    // 总人数最多4，限制AI最大数量
+    const maxAI = 4 - n;
+    const btns = document.querySelectorAll('#onlineAICountGroup .btn');
+    btns.forEach(b => {
+      const aiN = parseInt(b.textContent);
+      b.style.display = (aiN <= maxAI) ? '' : 'none';
+    });
+    if (this.onlineAICount > maxAI) this.selectOnlineAICount(maxAI);
+    this._updateOnlineDesc();
+  }
+
+  selectOnlineAICount(n) {
+    this.onlineAICount = n;
+    document.querySelectorAll('#onlineAICountGroup .btn').forEach(b => b.classList.remove('selected'));
+    const btn = document.getElementById('olAI' + n);
+    if (btn) btn.classList.add('selected');
+    this._updateOnlineDesc();
+  }
+
+  _updateOnlineDesc() {
+    const human = this.onlineTotalPlayers;
+    const ai = this.onlineAICount;
+    document.getElementById('onlineSetupDesc').textContent = human + ' 真人 + ' + ai + ' AI  = ' + (human + ai) + ' 人';
+  }
+
+  backToModeSelect() {
+    this.gameMode = 'local';
+    this.customMap = null;
+    if (this.network) { this.network.disconnect(); this.network = null; }
+    document.getElementById('playerSelectOverlay').style.display = 'flex';
+    document.getElementById('modeSelectScreen').style.display = 'block';
+    document.getElementById('localSetupScreen').style.display = 'none';
+    document.getElementById('aiSetupScreen').style.display = 'none';
+    document.getElementById('onlineLobbyScreen').style.display = 'none';
+    document.getElementById('btnQuit').style.display = 'none';
+    document.getElementById('topBar').style.display = 'none';
+    document.getElementById('bottomBar').style.display = 'none';
+    document.getElementById('aiLog').style.display = 'none';
+  }
+
+  // === 联机大厅（PeerJS 信令 + 4位房间码） ===
+  _genRoomCode() { return String(1000 + Math.floor(Math.random() * 9000)); }
+
+  showHostSetup() {
+    document.getElementById('onlineMainButtons').style.display = 'none';
+    document.getElementById('onlineHostSetup').style.display = '';
+  }
+
+  showJoinSetup() {
+    document.getElementById('onlineMainButtons').style.display = 'none';
+    document.getElementById('onlineJoinSetup').style.display = '';
+  }
+
+  createRoom() {
+    const total = this.onlineTotalPlayers;
+    this.myPlayerIndex = 0;
+    const code = this._genRoomCode();
+    const name = document.getElementById('onlineNameInput').value.trim() || '房主';
+    document.getElementById('onlineHostSetup').style.display = 'none';
+    document.getElementById('roomLobbyArea').style.display = '';
+    document.getElementById('roomCodeDisplay').textContent = '----';
+    document.getElementById('btnStartOnline').style.display = 'none';
+    document.getElementById('lobbyStatus').textContent = '正在创建房间...';
+    this.network = new NetworkManager();
+    this.network.myName = name;
+    this._setupOnlineDataHandler();
+    this.network.onRoomCreated((c) => {
+      document.getElementById('roomCodeDisplay').textContent = code;
+      document.getElementById('lobbyStatus').textContent = '等待玩家加入...（1/' + total + ' 人，告知对方房间码）';
+      this._updateLanPlayerList();
+    });
+    this.network.onPeerJoined((idx) => {
+      this._updateLanPlayerList();
+    });
+    this.network.onConnected((idx) => {
+      const connected = this.network.totalConnected;
+      // 发送 room_info 给新加入的玩家（告知其序号和当前人数）
+      this.network.sendTo({ type: 'room_info', current: connected, total: total, yourIndex: idx + 1 }, idx);
+      // 通知其他已连接玩家（排除新来的）
+      if (connected > 2) {
+        this.network.send({ type: 'room_info', current: connected, total: total }, idx);
+      }
+      this._updateLanPlayerList();
+      if (connected >= total) {
+        document.getElementById('btnStartOnline').style.display = '';
+        document.getElementById('lobbyStatus').textContent = '全部到齐！可以开始游戏了';
+      } else {
+        document.getElementById('lobbyStatus').textContent = '新玩家加入！(' + connected + '/' + total + ')';
+      }
+    });
+    this.network.onDisconnected(() => {
+      if (this.state === 'playing') this.setActionText('对手断开连接！');
+      this._updateLanPlayerList();
+    });
+    this.network.createRoom(code);
+  }
+
+  hostStartGame() {
+    this.network.send({ type: 'start_game' });
+    this.startOnlineGame();
+  }
+
+  joinRoom() {
+    const code = document.getElementById('roomCodeInput').value.trim();
+    if (code.length !== 4) { alert('请输入4位房间码'); return; }
+    const name = document.getElementById('onlineJoinNameInput').value.trim() || '玩家';
+    document.getElementById('onlineJoinSetup').style.display = 'none';
+    document.getElementById('roomLobbyArea').style.display = '';
+    document.getElementById('roomCodeDisplay').textContent = code;
+    document.getElementById('btnStartOnline').style.display = 'none';
+    document.getElementById('lobbyStatus').textContent = '正在加入房间...';
+    this.network = new NetworkManager();
+    this.network.myName = name;
+    this._setupOnlineDataHandler();
+    this.network.onConnected(() => {
+      document.getElementById('lobbyStatus').textContent = '已连接！等待房主开始游戏...';
+      this._updateLanPlayerList();
+    });
+    this.network.onPeerJoined(() => { this._updateLanPlayerList(); });
+    this.network.onDisconnected(() => {
+      if (this.state === 'playing') this.setActionText('对手断开连接！');
+      const el = document.getElementById('lobbyStatus');
+      if (el) el.textContent = '连接断开';
+    });
+    this.network.joinRoom(code);
+  }
+
+  _updateLanPlayerList() {
+    if (!this.network) return;
+    const el = document.getElementById('onlinePlayerList');
+    if (!el) return;
+    const total = this.onlineTotalPlayers;
+    let html = '<div>✓ 你</div>';
+    for (const peer of this.network.peers) {
+      const n = peer.index + 2;
+      if (peer.connected) {
+        html += '<div style="color:#27ae60;">✓ 玩家' + n + '</div>';
+      } else {
+        html += '<div style="color:#999;">○ 玩家' + n + ' (连接中...)</div>';
+      }
+    }
+    const connected = 1 + this.network.peers.filter(p => p.connected).length;
+    for (let i = connected; i < total; i++) {
+      html += '<div style="color:#999;">○ 等待加入...</div>';
+    }
+    el.innerHTML = html;
+  }
+
+  _setupOnlineDataHandler() {
+    this.network.onData((data, srcIdx) => {
+      // 加入者：收到 room_info 后更新自己的序号和当前人数
+      if (data.type === 'room_info') {
+        if (data.yourIndex !== undefined) this.myPlayerIndex = data.yourIndex;
+        document.getElementById('lobbyStatus').textContent = '已加入房间（' + data.current + '/' + data.total + ' 人），等待房主开始...';
+        return;
+      }
+      if (data.type === 'start_game') { this.startOnlineGame(); return; }
+      if (data.type === 'map') {
+        this.cities = data.mapData.cities;
+        this.mountains = data.mapData.mountains;
+        this.rivers = data.mapData.rivers;
+        if (data.config) this._onlineConfig = data.config;
+        if (data.myPlayerIndex !== undefined) this.myPlayerIndex = data.myPlayerIndex;
+        this._onlineMapReceived = true;
+        // 如果游戏已启动（start_game 先到达），立即刷新地图
+        if (this._onlineGameStarted) this.render();
+        return;
+      }
+      if (!this._onlineGameStarted) return;
+      this._handleRemoteAction(data, srcIdx);
+    });
+  }
+
+  leaveLobby() {
+    if (this.network) { this.network.disconnect(); this.network = null; }
+    this.myPlayerIndex = 0;
+    this._onlineGameStarted = false;
+    document.getElementById('onlineMainButtons').style.display = '';
+    document.getElementById('onlineHostSetup').style.display = 'none';
+    document.getElementById('onlineJoinSetup').style.display = 'none';
+    document.getElementById('roomLobbyArea').style.display = 'none';
+    document.getElementById('btnStartOnline').style.display = 'none';
+    document.getElementById('lobbyStatus').textContent = '';
+    document.getElementById('onlinePlayerList').innerHTML = '';
+  }
+
+  startOnlineGame() {
+    this._onlineGameStarted = true;
+    document.getElementById('playerSelectOverlay').style.display = 'none';
+    document.getElementById('onlineLobbyScreen').style.display = 'none';
+    document.getElementById('topBar').style.display = '';
+    document.getElementById('btnQuit').style.display = '';
+    document.getElementById('bottomBar').style.display = '';
+    this.state = 'playing';
+
+    if (this.myPlayerIndex === 0) {
+      // 主机：立即知道配置，初始化玩家并发送地图
+      const total = this.onlineTotalPlayers + this.onlineAICount;
+      const aiCount = this.onlineAICount;
+      this._initOnlinePlayers(total, aiCount);
+      this._menuMapGenerated = false;
+      this.generateMap();
+      const mapData = { cities: this.cities, mountains: this.mountains, rivers: this.rivers };
+      let joinIdx = 1;
+      for (const peer of this.network.peers) {
+        if (peer.connected) {
+          this.network.sendTo({ type: 'map', mapData: mapData, myPlayerIndex: joinIdx, config: { total, ai: aiCount } }, peer.index);
+          joinIdx++;
+        }
+      }
+      this._onlineMapReceived = true;
+    } else {
+      // 非主机：等收到 map（含 config）后再初始化玩家
+      this._onlineMapReceived = this.cities.length > 0 && !!this._onlineConfig;
+    }
+
+    if (this._onlineMapReceived) {
+      this._startOnlinePlay();
+    } else {
+      const checkMap = setInterval(() => {
+        if (this._onlineMapReceived && this._onlineConfig) {
+          clearInterval(checkMap);
+          this._startOnlinePlay();
+        }
+      }, 200);
+    }
+
+    this.render();
+  }
+
+  _initOnlinePlayers(total, aiCount) {
+    this.selectedPlayerCount = total;
+    CONFIG.PLAYERS = total;
+    this.players = [];
+    for (let i = 0; i < total; i++) {
+      const isAI = (i >= total - aiCount);
+      const isMe = (i === this.myPlayerIndex);
+      let name = CONFIG.COLOR_NAMES[i];
+      if (isMe) name = this.network.myName + '(你)';
+      else if (!isAI) name = '玩家' + (i + 1);
+      else name = 'AI-' + CONFIG.COLOR_NAMES[i];
+      this.players.push({
+        id: i, color: CONFIG.COLORS[i], name: name,
+        alive: true, emperorCityId: null, cities: [], factories: [],
+        isHuman: !isAI
+      });
+    }
+  }
+
+  _startOnlinePlay() {
+    // 非主机：此时 _onlineConfig 已经就绪，初始化玩家列表
+    if (this.myPlayerIndex !== 0 && this._onlineConfig) {
+      this._initOnlinePlayers(this._onlineConfig.total, this._onlineConfig.ai);
+    }
+    this.currentPlayer = 0;
+    this.turn = 1;
+    this.setupPlayer = 0;
+    if (this.myPlayerIndex === 0) {
+      this._processEmperors();
+    } else {
+      this.setActionText('等待房主开始...');
+      this.setButtonsEnabled(false);
+    }
+  }
+
+  // ===== 皇帝放置：单一驱动函数（主机调用；加入者收到 your_turn 后调用）=====
+  _processEmperors() {
+    // 所有人都有皇帝了 → 开始正常回合
+    if (this.players.length > 0 && this.players.every(p => p.emperorCityId != null)) {
+      document.getElementById('emperorPrompt').style.display = 'none';
+      this._emperorClickHandler = null;
+      if (this.myPlayerIndex === 0) this._startOnlineTurns();
+      return;
+    }
+
+    // 找下一个没皇帝的玩家
+    let idx = 0;
+    while (idx < this.players.length && this.players[idx].emperorCityId != null) idx++;
+    if (idx >= this.players.length) return;
+    const player = this.players[idx];
+
+    // AI：仅主机自动放置，然后继续下一个
+    if (!player.isHuman) {
+      if (this.myPlayerIndex === 0) {
+        const empty = this.cities.filter(c => !c.owner && !c.hasEmperor);
+        if (empty.length > 0) {
+          const city = empty[Math.floor(Math.random() * empty.length)];
+          this._doEmperorPlace(idx, city.id);
+          this.network.send({ type: 'place_emperor', cityId: city.id, player: idx });
+        }
+        setTimeout(() => this._processEmperors(), 50);
+      }
+      return;
+    }
+
+    // 本地玩家回合 → 显示放置界面
+    if (idx === this.myPlayerIndex) {
+      this._showEmperorPlaceUI(idx);
+      return;
+    }
+
+    // 主机：通知远程玩家轮到ta了
+    if (this.myPlayerIndex === 0) {
+      this.network.send({ type: 'your_turn', player: idx });
+      this.setActionText('等待 ' + player.name + ' 放置皇帝...');
+    }
+    this.setButtonsEnabled(false);
+    this._emperorClickHandler = null;
+    this.render();
+  }
+
+  // 本地状态：放置皇帝
+  _doEmperorPlace(playerIdx, cityId) {
+    const city = this.cities[cityId];
+    if (!city || city.owner != null) return;
+    city.owner = playerIdx;
+    city.hasEmperor = true;
+    city.hp = 5;
+    this.players[playerIdx].emperorCityId = cityId;
+    if (!this.players[playerIdx].cities.includes(cityId)) {
+      this.players[playerIdx].cities.push(cityId);
+    }
+  }
+
+  // 显示皇帝放置界面
+  _showEmperorPlaceUI(playerIdx) {
+    const player = this.players[playerIdx];
+    this.currentPlayer = playerIdx;
+    this.state = 'playing';
+    document.getElementById('emperorPrompt').style.display = 'block';
+    document.getElementById('emperorText').textContent =
+      `玩家 ${playerIdx + 1} (${CONFIG.COLOR_NAMES[playerIdx]}) - 请点击一座空城放置皇帝`;
+    document.getElementById('emperorTitle').style.color = CONFIG.COLORS[playerIdx];
+    this.setButtonsEnabled(true);
+
+    this._emperorClickHandler = (pos) => {
+      const city = this._findCityAt(pos.x, pos.y);
+      if (!city || city.owner !== null || city.hasEmperor) {
+        this.setActionText('请点击一座空城放置皇帝');
+        return;
+      }
+      this._doEmperorPlace(playerIdx, city.id);
+      this.setActionText(player.name + '已放置皇帝');
+      this._emperorClickHandler = null;
+      this.setButtonsEnabled(false);
+      document.getElementById('emperorPrompt').style.display = 'none';
+
+      // 通知主机（主机收到后会 relay + 继续；加入者发送后等待）
+      this.network.send({ type: 'place_emperor', cityId: city.id, player: playerIdx });
+      this.render();
+
+      // 主机：继续下一个
+      if (this.myPlayerIndex === 0) {
+        this._processEmperors();
+      }
+    };
+    this.render();
+  }
+
+  _findCityAt(x, y) {
+    for (const city of this.cities) {
+      if (distToPoint(x, y, city.x, city.y) < 35) return city;
+    }
+    return null;
+  }
+
+  _startOnlineTurns() {
+    this.state = 'playing';
+    this.currentPlayer = 0;
+    this.turn = 1;
+    this._emperorClickHandler = null;
+    this._emperorDragStart = null;
+    this.setMode(null);
+    this.render();
+    this._syncTurnState();
+  }
+
+  _syncTurnState() {
+    this.updateUI();
+    const player = this.players[this.currentPlayer];
+    if (player && !player.isHuman) {
+      // AI回合：仅主机执行，远程等待
+      this.setButtonsEnabled(false);
+      this.setActionText(player.name + ' 思考中...');
+      if (this.myPlayerIndex === 0) {
+        setTimeout(() => this.startAITurn(), 600);
+      }
+      return;
+    }
+    if (this.currentPlayer === this.myPlayerIndex) {
+      this.setButtonsEnabled(true);
+      this.setActionText('轮到你了');
+    } else {
+      this.setButtonsEnabled(false);
+      this.setActionText('等待对手操作...');
+    }
+  }
+
+  _handleRemoteAction(data, srcIdx) {
+    if (data.type === 'full_state') {
+      // 主机：转发给所有其他玩家（排除来源，避免回路）
+      if (this.myPlayerIndex === 0 && srcIdx !== undefined) {
+        this.network.send(data, srcIdx);
+      }
+      this._applyState(data.state);
+      this.currentPlayer = data.currentPlayer;
+      this.turn = data.turn;
+      this._syncTurnState();
+      this.render();
+    } else if (data.type === 'place_emperor') {
+      this._doEmperorPlace(data.player, data.cityId);
+      if (this.myPlayerIndex === 0) {
+        // 主机：转发给其他玩家（排除来源），继续驱动
+        if (srcIdx !== undefined) this.network.send(data, srcIdx);
+        this._processEmperors();
+      } else {
+        this.render();
+      }
+    } else if (data.type === 'your_turn') {
+      if (data.player === this.myPlayerIndex) {
+        this._processEmperors();
+      }
+    }
+  }
+
+  _syncAction(actionData) {
+    if (this.network && this.network.connectedPeers > 0 && this.currentPlayer === this.myPlayerIndex) {
+      this.network.send(actionData);
+    }
+  }
+
+  selectAIHumanCount(n) {
+    this.humanPlayerCount = n;
+    document.querySelectorAll('#humanCountGroup .btn').forEach(b => b.classList.remove('selected'));
+    const btn = document.getElementById('pc' + n + '_ai');
+    if (btn) btn.classList.add('selected');
+    if (this.aiPlayerCount === undefined) {
+      this.aiPlayerCount = 4 - n;
+      const aiBtn = document.getElementById('ai' + this.aiPlayerCount);
+      if (aiBtn) aiBtn.classList.add('selected');
+    }
+    this.updateAISetupDesc();
+  }
+
+  selectAICount(n) {
+    this.aiPlayerCount = n;
+    document.querySelectorAll('#aiCountGroup .btn').forEach(b => b.classList.remove('selected'));
+    const btn = document.getElementById('ai' + n);
+    if (btn) btn.classList.add('selected');
+    this.updateAISetupDesc();
+  }
+
+  updateAISetupDesc() {
+    const total = (this.humanPlayerCount || 1) + (this.aiPlayerCount || 3);
+    const el = document.getElementById('aiSetupDesc');
+    if (total > 4) {
+      el.textContent = '⚠️ 共 ' + total + ' 人，超4人上限！';
+      el.style.color = '#e74c3c';
+    } else {
+      el.textContent = this.humanPlayerCount + ' 人 + ' + this.aiPlayerCount + ' AI  = ' + total + ' 人';
+      el.style.color = '';
+    }
+  }
+
+  startGame() {
+    if (this.gameMode === 'ai') {
+      const total = (this.humanPlayerCount || 1) + (this.aiPlayerCount || 3);
+      if (total > 4) {
+        this.setActionText('总人数不能超过4人，请调整');
+        return;
+      }
+      this.selectedPlayerCount = total;
+    }
+    CONFIG.PLAYERS = this.selectedPlayerCount;
+    this.players = [];
+    for (let i = 0; i < CONFIG.PLAYERS; i++) {
+      this.players.push({
+        id: i, color: CONFIG.COLORS[i], name: CONFIG.COLOR_NAMES[i],
+        alive: true, emperorCityId: null, cities: [], factories: [],
+        isHuman: this.gameMode === 'local' || i < this.humanPlayerCount
+      });
+    }
+
+    // AI模式：创建AIPlayer
+    if (this.gameMode === 'ai' || (this.gameMode === 'online' && this.onlineAICount > 0)) {
+      this.aiPlayer = new AIPlayer(this);
+      document.getElementById('aiLog').style.display = 'flex';
+      this.aiLog('info', 'AI模式启动');
+    }
+
+    this._menuMapGenerated = false;
+    this.generateMap();
+    this.state = 'setup';
+    this.setupPlayer = 0;
+
+    document.getElementById('playerSelectOverlay').style.display = 'none';
+    document.getElementById('topBar').style.display = '';
+    document.getElementById('btnQuit').style.display = '';
+    document.getElementById('bottomBar').style.display = '';
+    document.getElementById('emperorPrompt').style.display = 'block';
+    this.updateEmperorPrompt();
+
+    // AI模式：如果第一个是AI则自动放置皇帝
+    if (this.gameMode === 'ai' && !this.players[0].isHuman) {
+      this.setActionText('AI 正在放置皇帝...');
+      setTimeout(() => this.aiAutoSetup(), 600);
+    } else {
+      this.setActionText('请点击空城放置皇帝');
+    }
+    this.render();
+  }
+
+  // ==================== 地图编辑器 ====================
+  openMapEditor() {
+    this._savedMap = { cities: this.cities, mountains: this.mountains, rivers: this.rivers, state: this.state, camera: { ...this.camera } };
+    this.cities = []; this.mountains = []; this.rivers = []; this.state = 'editing';
+    this.camera = { x: 0, y: 0, zoom: 1 };
+    this._edit = {
+      cities: [], rivers: [], bridges: [], mountains: [], mountainCities: [],
+      tool: 'city', drawing: false, history: []
+    };
+    document.getElementById('mapEditorOverlay').style.display = 'block';
+    document.getElementById('editorBar').classList.add('show');
+    document.getElementById('playerSelectOverlay').style.display = 'none';
+    document.getElementById('topBar').style.display = 'none';
+    document.getElementById('bottomBar').style.display = 'none';
+    document.getElementById('canvasWrap').style.paddingBottom = '36px';
+    this.setEditTool('city');
+    this._editRender();
+  }
+
+  closeMapEditor() {
+    document.getElementById('mapEditorOverlay').style.display = 'none';
+    document.getElementById('editorBar').classList.remove('show');
+    document.getElementById('canvasWrap').style.paddingBottom = '';
+    document.getElementById('playerSelectOverlay').style.display = 'flex';
+    if (this._savedMap) {
+      this.cities = this._savedMap.cities;
+      this.mountains = this._savedMap.mountains;
+      this.rivers = this._savedMap.rivers;
+      this.state = this._savedMap.state;
+      this.camera = this._savedMap.camera || { x: 0, y: 0, zoom: 1 };
+      this._savedMap = null;
+    }
+    this._edit = null;
+  }
+
+  setEditTool(tool) {
+    this._edit.tool = tool;
+    document.querySelectorAll('#editorBar .ed-tool').forEach(b => b.classList.remove('active'));
+    const map = { city: 'btCity', river: 'btRiver', bridge: 'btBridge', mountain: 'btMtn', mountainCity: 'btMtnCity' };
+    const el = document.getElementById(map[tool]);
+    if (el) el.classList.add('active');
+    const hints = { city: '点击放置城池', river: '长按拖拽画河流', bridge: '点击河流上放桥', mountain: '长按拖拽画山', mountainCity: '长按拖拽画山城' };
+    document.getElementById('editHint').textContent = hints[tool] || '';
+  }
+
+  _editPush() { this._edit.history.push(JSON.parse(JSON.stringify({ cities: this._edit.cities, rivers: this._edit.rivers, bridges: this._edit.bridges, mountains: this._edit.mountains, mountainCities: this._edit.mountainCities }))); }
+
+  undoEdit() {
+    if (this._edit.history.length > 0) {
+      const prev = this._edit.history.pop();
+      Object.assign(this._edit, prev);
+      this._editRender();
+    }
+  }
+
+  clearEditMap() {
+    if (confirm('确定清空地图？')) {
+      this._editPush();
+      this._edit.cities = []; this._edit.rivers = []; this._edit.bridges = [];
+      this._edit.mountains = []; this._edit.mountainCities = [];
+      this._editRender();
+    }
+  }
+
+  saveCustomMap() {
+    const e = this._edit;
+    const totalEls = e.cities.length + e.rivers.length + e.bridges.length + e.mountains.length + e.mountainCities.length;
+    if (totalEls < 2) { alert('请至少画2个元素再保存'); return; }
+
+    // 转换为游戏格式
+    const customCities = [];
+    const customMountains = [];
+    const customRivers = [];
+
+    // 城池
+    for (let i = 0; i < e.cities.length; i++) {
+      customCities.push({ x: e.cities[i].x, y: e.cities[i].y });
+    }
+    // 河流（关联桥）
+    for (const r of e.rivers) {
+      if (r.points && r.points.length >= 2) {
+        const pts = r.points.map(p => ({ x: p.x, y: p.y }));
+        // 找出这条河上的桥
+        const riverBridges = [];
+        for (const b of e.bridges) {
+          let minD = Infinity;
+          for (let i = 0; i < pts.length - 1; i++) {
+            const a = pts[i], b2 = pts[i + 1];
+            const dx = b2.x - a.x, dy = b2.y - a.y, len = Math.hypot(dx, dy);
+            if (len < 2) continue;
+            const t = Math.max(0, Math.min(1, ((b.x - a.x) * dx + (b.y - a.y) * dy) / (len * len)));
+            const px = a.x + t * dx, py = a.y + t * dy;
+            minD = Math.min(minD, Math.hypot(b.x - px, b.y - py));
+          }
+          if (minD < 60) riverBridges.push({ x: b.x, y: b.y });
+        }
+        customRivers.push({ points: pts, bridges: riverBridges });
+      }
+    }
+    // 山
+    for (const m of e.mountains) {
+      if (m.points && m.points.length >= 3) {
+        customMountains.push({ points: m.points.map(p => ({ x: p.x, y: p.y })) });
+      }
+    }
+    // 山城 = 山 + 城池（城池在山顶上方10px）
+    for (const mc of e.mountainCities) {
+      if (mc.points && mc.points.length >= 3) {
+        customMountains.push({ points: mc.points.map(p => ({ x: p.x, y: p.y })) });
+        const cx = mc.points.reduce((s, p) => s + p.x, 0) / mc.points.length;
+        const topY = Math.min(...mc.points.map(p => p.y));
+        customCities.push({ x: cx, y: topY + 8 });
+      }
+    }
+
+    // 保存自定义地图数据（_applyCustomMap 会补全 id/hp/owner 等字段）
+    this.customMap = { cities: customCities, rivers: customRivers, mountains: customMountains };
+    // 清空 cities，让 startGame/startOnlineGame 调用 generateMap → _applyCustomMap 生成完整数据结构
+    this.cities = [];
+    this.mountains = [];
+    this.rivers = [];
+    document.getElementById('mapEditorOverlay').style.display = 'none';
+    document.getElementById('editorBar').classList.remove('show');
+    document.getElementById('canvasWrap').style.paddingBottom = '';
+    document.getElementById('playerSelectOverlay').style.display = 'flex';
+    if (this._savedMap) {
+      this.state = this._savedMap.state;
+      this.camera = this._savedMap.camera || { x: 0, y: 0, zoom: 1 };
+      this._savedMap = null;
+    }
+    this._edit = null;
+
+    // 提示
+    if (document.getElementById('lobbyStatus')) {
+      document.getElementById('lobbyStatus').textContent = '✓ 自定义地图已保存，将使用绘制的地图';
+    }
+  }
+
+  _editRender() {
+    // 画空白背景（重置变换，不受游戏摄像机影响）
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // 重置所有变换
+    const W = CONFIG.MAP_W, H = CONFIG.MAP_H;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#FCF9F2';
+    ctx.fillRect(0, 0, W, H);
+    // 淡色网格
+    ctx.strokeStyle = 'rgba(180,170,150,0.3)';
+    ctx.lineWidth = 0.5;
+    for (let x = 0; x < W; x += 80) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y < H; y += 80) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    // 画布边界
+    ctx.strokeStyle = '#8B7355'; ctx.lineWidth = 3;
+    ctx.strokeRect(1, 1, W - 2, H - 2);
+    const e = this._edit;
+    // 统计
+    const stats = document.getElementById('editStats');
+    if (stats) stats.textContent = e.cities.length + '城 ' + e.rivers.length + '河 ' + e.bridges.length + '桥 ' + e.mountains.length + '山 ' + e.mountainCities.length + '山城';
+
+    // 河流 — 与游戏一致
+    for (const r of e.rivers) {
+      if (r.points.length < 2) continue;
+      ctx.strokeStyle = '#3366AA'; ctx.lineWidth = 44;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(r.points[0].x, r.points[0].y);
+      for (let i = 1; i < r.points.length; i++) ctx.lineTo(r.points[i].x, r.points[i].y);
+      ctx.stroke();
+      ctx.lineWidth = 36; ctx.strokeStyle = '#4488CC';
+      ctx.beginPath(); ctx.moveTo(r.points[0].x, r.points[0].y);
+      for (let i = 1; i < r.points.length; i++) ctx.lineTo(r.points[i].x, r.points[i].y);
+      ctx.stroke();
+    }
+
+    // 桥 — 与游戏一致
+    for (const b of e.bridges) {
+      let angle = 0;
+      for (const r of e.rivers) {
+        if (r.points.length < 2) continue;
+        for (let i = 0; i < r.points.length - 1; i++) {
+          const a = r.points[i], b2 = r.points[i + 1];
+          const dx = b2.x - a.x, dy = b2.y - a.y, len = Math.hypot(dx, dy);
+          if (len < 2) continue;
+          const t = Math.max(0, Math.min(1, ((b.x - a.x) * dx + (b.y - a.y) * dy) / (len * len)));
+          const px = a.x + t * dx, py = a.y + t * dy;
+          if (Math.hypot(b.x - px, b.y - py) < 60) { angle = Math.atan2(dy, dx) + Math.PI / 2; break; }
+        }
+        if (angle !== 0) break;
+      }
+      ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(angle);
+      ctx.fillStyle = '#D4A76A'; ctx.fillRect(-50, -18, 100, 36);
+      ctx.strokeStyle = '#4A3728'; ctx.lineWidth = 3;
+      sketchRect(ctx, -50, -18, 100, 36, 3);
+      ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 1.5;
+      for (let lx = -40; lx <= 40; lx += 10) {
+        ctx.beginPath(); ctx.moveTo(jitter(lx,1.5), jitter(-18,1.5)); ctx.lineTo(jitter(lx,1.5), jitter(18,1.5)); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // 山 — 使用游戏手绘风格（jitter + 三角峰）
+    const drawEditMtn = (pts) => {
+      if (pts.length < 3) return;
+      ctx.strokeStyle = '#4A3728'; ctx.lineWidth = 2.5; ctx.fillStyle = '#FCF9F2';
+      ctx.beginPath();
+      ctx.moveTo(jitter(pts[0].x,2), jitter(pts[0].y,2));
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(jitter(pts[i].x,2), jitter(pts[i].y,2));
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+      const my = Math.min(...pts.map(p => p.y));
+      const mh = Math.max(...pts.map(p => p.y)) - my || 40;
+      const peakBase = my + 5;     // 山顶线下方5px
+      const peakTip = my - 5;      // 山顶上方5px（山峰尖）
+      ctx.strokeStyle = '#4A3728'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(jitter(cx-10,1), jitter(peakBase,1));
+      ctx.lineTo(jitter(cx,1), jitter(peakTip,1));
+      ctx.lineTo(jitter(cx+10,1), jitter(peakBase,1));
+      ctx.stroke();
+    };
+    for (const m of e.mountains) drawEditMtn(m.points);
+
+    // 山城 — 山 + 山顶城池
+    for (const mc of e.mountainCities) {
+      drawEditMtn(mc.points);
+      const cx = mc.points.reduce((s, p) => s + p.x, 0) / mc.points.length;
+      const my = Math.min(...mc.points.map(p => p.y));
+      // 城池嵌在山顶（游戏生成逻辑：y - h/2 + 15）
+      const cy = Math.min(...mc.points.map(p => p.y)) + 8;
+      this.drawCity(ctx, { x: cx, y: cy, owner: null, hp: 0, hasEmperor: false });
+    }
+
+    // 城池 — 调用游戏原生 drawCity
+    for (const c of e.cities) {
+      this.drawCity(ctx, { x: c.x, y: c.y, owner: null, hp: 0, hasEmperor: false });
+    }
+    // 当前正在绘制的路径预览
+    if (e.drawing && e.drawPoints.length > 0) {
+      const pts = e.drawPoints;
+      ctx.save();
+      ctx.globalAlpha = 0.7;
+      if (e.tool === 'river') {
+        ctx.strokeStyle = '#3388DD'; ctx.lineWidth = 44;
+        ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.stroke();
+      } else if (e.tool === 'mountain' || e.tool === 'mountainCity') {
+        ctx.strokeStyle = '#8B7355'; ctx.lineWidth = 2;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.stroke(); ctx.setLineDash([]);
+        // 显示当前位置
+        const last = pts[pts.length - 1];
+        ctx.fillStyle = '#e67e22'; ctx.beginPath(); ctx.arc(last.x, last.y, 5, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.restore(); // 恢复游戏变换
+  }
+
+  _editPointerDown(pos) {
+    this._edit.drawing = true;
+    this._edit.drawPoints = [pos];
+  }
+
+  _editPointerMove(pos) {
+    if (!this._edit.drawing) return;
+    const t = this._edit.tool;
+    if (t === 'river' || t === 'mountain' || t === 'mountainCity') {
+      const last = this._edit.drawPoints[this._edit.drawPoints.length - 1];
+      const dist = Math.hypot(pos.x - last.x, pos.y - last.y);
+      if (dist > 6 || this._edit.drawPoints.length < 2) {
+        if (this._edit.drawPoints.length < 2) this._edit.drawPoints.push(pos);
+        else this._edit.drawPoints.push(pos);
+        this._editRender();
+      }
+    }
+  }
+
+  _editPointerUp(pos) {
+    if (!this._edit.drawing) return;
+    this._edit.drawing = false;
+    const t = this._edit.tool;
+    const pts = this._edit.drawPoints;
+
+    if (t === 'city') {
+      this._edit.cities.push({ x: pos.x, y: pos.y });
+    } else if (t === 'river') {
+      if (pts.length < 2) {
+        // 单点 → 自动生成一小段
+        this._edit.rivers.push({ points: [{ x: pos.x - 60, y: pos.y }, { x: pos.x + 60, y: pos.y }] });
+      } else {
+        // 拖拽路径
+        this._edit.rivers.push({ points: [...pts] });
+      }
+    } else if (t === 'bridge') {
+      // 找最近的河流
+      let bestR = null, bestT = Infinity, bestP = null;
+      for (const r of this._edit.rivers) {
+        if (r.points.length < 2) continue;
+        for (let i = 0; i < r.points.length - 1; i++) {
+          const a = r.points[i], b = r.points[i + 1];
+          const dx = b.x - a.x, dy = b.y - a.y;
+          const len = Math.hypot(dx, dy);
+          if (len < 2) continue;
+          const t = Math.max(0, Math.min(1, ((pos.x - a.x) * dx + (pos.y - a.y) * dy) / (len * len)));
+          const px = a.x + t * dx, py = a.y + t * dy;
+          const d = Math.hypot(pos.x - px, pos.y - py);
+          if (d < bestT) { bestT = d; bestR = r; bestP = { x: px, y: py }; }
+        }
+      }
+      if (bestR && bestT < 60) {
+        this._edit.bridges.push({ x: bestP.x, y: bestP.y });
+      } else {
+        alert('请在河流附近点击放置桥');
+      }
+    } else if (t === 'mountain') {
+      if (pts.length < 3) {
+        // 不够3个点，自动生成圆形山
+        const r = 60;
+        const gen = [];
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+          gen.push({ x: pos.x + Math.cos(a) * (r - 10 + Math.random() * 20), y: pos.y + Math.sin(a) * (r - 10 + Math.random() * 20) });
+        }
+        this._edit.mountains.push({ points: gen });
+      } else {
+        this._edit.mountains.push({ points: [...pts] });
+      }
+    } else if (t === 'mountainCity') {
+      if (pts.length < 3) {
+        const r = 60;
+        const gen = [];
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+          gen.push({ x: pos.x + Math.cos(a) * (r - 10 + Math.random() * 20), y: pos.y + Math.sin(a) * (r - 10 + Math.random() * 20) });
+        }
+        this._edit.mountainCities.push({ points: gen });
+      } else {
+        this._edit.mountainCities.push({ points: [...pts] });
+      }
+    }
+    this._edit.drawPoints = [];
+    this._editRender();
+  }
+
+  _applyCustomMap() {
+    this.cities = [];
+    this.mountains = [];
+    this.rivers = [];
+
+    // 城池
+    let cityId = 0;
+    for (const c of this.customMap.cities) {
+      this.cities.push({ id: cityId++, x: c.x, y: c.y, owner: null, hp: 3, hasEmperor: false, isMountainCity: false, mountainId: undefined });
+    }
+    // 河流（包含桥）
+    for (const r of this.customMap.rivers) {
+      if (r.points && r.points.length >= 2) {
+        this.rivers.push({ id: this.rivers.length, points: r.points.map(p => ({ x: p.x, y: p.y })), width: 55, bridges: r.bridges || [] });
+      }
+    }
+    // 山 — 补全山体中心、高度、绳子属性
+    let mtnId = 0;
+    for (const m of this.customMap.mountains) {
+      if (m.points && m.points.length >= 3) {
+        const pts = m.points.map(p => ({ x: p.x, y: p.y }));
+        const cx = pts.reduce((s, p) => s + p.x, 0) / pts.length;
+        const minY = Math.min(...pts.map(p => p.y));
+        const maxY = Math.max(...pts.map(p => p.y));
+        const h = maxY - minY || 40;
+        const cy = minY + h / 2;
+        this.mountains.push({ id: mtnId++, points: pts, x: cx, y: cy, h: h, hasRope: false });
+      }
+    }
+    this.customMap = null;
+  }
+
+  generateMap() {
+    if (this.customMap) {
+      this._applyCustomMap();
+      return;
+    }
+    this.cities = [];
+    this.mountains = [];
+    this.rivers = [];
+
+    // ===== 1. 河流：边界到边界 =====
+    for (let i = 0; i < CONFIG.RIVER_COUNT; i++) {
+      let attempts = 0;
+      while (attempts < 200) {
+        attempts++;
+        // 随机选两条不同的边
+        const sides = [0, 1, 2, 3]; // 上,右,下,左
+        const s1 = sides[Math.floor(Math.random() * 4)];
+        let s2 = sides[Math.floor(Math.random() * 4)];
+        while (s2 === s1) s2 = sides[Math.floor(Math.random() * 4)];
+        const getBorderPoint = (side) => {
+          switch (side) {
+            case 0: return { x: randInt(100, CONFIG.MAP_W - 100), y: 0 };
+            case 1: return { x: CONFIG.MAP_W, y: randInt(100, CONFIG.MAP_H - 100) };
+            case 2: return { x: randInt(100, CONFIG.MAP_W - 100), y: CONFIG.MAP_H };
+            case 3: return { x: 0, y: randInt(100, CONFIG.MAP_H - 100) };
+          }
+        };
+        const start = getBorderPoint(s1);
+        const end = getBorderPoint(s2);
+        const midX = (start.x + end.x) / 2 + randInt(-150, 150);
+        const midY = (start.y + end.y) / 2 + randInt(-150, 150);
+        const len = Math.hypot(end.x - start.x, end.y - start.y);
+        if (len > 300) {
+          const river = {
+            id: i, p0: start, p1: { x: (start.x + midX) / 2, y: (start.y + midY) / 2 },
+            p2: { x: (midX + end.x) / 2, y: (midY + end.y) / 2 }, p3: end,
+            width: rand(50, 65), bridges: []
+          };
+          // 生成1-2座桥
+          const bridgeCount = 1 + Math.floor(Math.random() * 2);
+          for (let b = 0; b < bridgeCount; b++) {
+            const t = 0.25 + Math.random() * 0.5; // 在河中间50%范围
+            const bpt = bezierPoint(t, river.p0, river.p1, river.p2, river.p3);
+            river.bridges.push({ x: Math.round(bpt.x), y: Math.round(bpt.y), t: t });
+          }
+          this.rivers.push(river);
+          break;
+        }
+      }
+    }
+
+    // ===== 2. 生成普通城池（避让河流和其他城池） =====
+    let attempts = 0;
+    while (this.cities.length < CONFIG.CITY_COUNT && attempts < 3000) {
+      attempts++;
+      const x = randInt(80, CONFIG.MAP_W - 80);
+      const y = randInt(80, CONFIG.MAP_H - 120);
+      let ok = true;
+      for (const c of this.cities) {
+        if (distToPoint(x, y, c.x, c.y) < CONFIG.MIN_DIST_CITY) { ok = false; break; }
+      }
+      if (!ok) continue;
+      for (const river of this.rivers) {
+        if (pointNearRiver(x, y, river, 55)) { ok = false; break; }
+      }
+      if (ok) {
+        this.cities.push({ id: this.cities.length, x, y, hp: 1, owner: null, hasEmperor: false });
+      }
+    }
+
+    // ===== 3. 生成山地（避让城池、河流、其他山地） =====
+    attempts = 0;
+    while (this.mountains.length < CONFIG.MOUNTAIN_COUNT && attempts < 2000) {
+      attempts++;
+      const x = randInt(120, CONFIG.MAP_W - 120);
+      const y = randInt(100, CONFIG.MAP_H - 150);
+      let ok = true;
+      // 与城池保持距离
+      for (const c of this.cities) {
+        if (distToPoint(x, y, c.x, c.y) < 80) { ok = false; break; }
+      }
+      if (!ok) continue;
+      // 与其他山地保持距离
+      for (const m of this.mountains) {
+        if (distToPoint(x, y, m.x, m.y) < CONFIG.MIN_DIST_MOUNTAIN) { ok = false; break; }
+      }
+      if (!ok) continue;
+
+      const w = rand(80, 140), h = rand(60, 100);
+      const points = [
+        {x: x - w/2, y: y + h/2},
+        {x: x - w/4, y: y - h/4},
+        {x: x, y: y - h/2},
+        {x: x + w/4, y: y - h/4},
+        {x: x + w/2, y: y + h/2}
+      ];
+      // 山体的所有顶点必须远离河流
+      if (mountainNearRiver(points, this.rivers, 35)) continue;
+
+      // 额外检查山的内部采样点
+      const extraPoints = [
+        {x, y},                              // 中心
+        {x: x - w/3, y: y + h/4},           // 左下内
+        {x: x + w/3, y: y + h/4},           // 右下内
+        {x: x - w/6, y: y - h/6},           // 左上内
+        {x: x + w/6, y: y - h/6}            // 右上内
+      ];
+      if (mountainNearRiver(extraPoints, this.rivers, 35)) continue;
+
+      const hasCity = Math.random() < 0.5;
+      const mtn = { id: this.mountains.length, x, y, w, h, points, hasCity, cityId: null, hasRope: false, ropeOwner: null };
+      if (hasCity) {
+        const cx = x + randInt(-10, 10);
+        const cy = y - h/2 + 15;
+        // 山顶城必须避开河流
+        let cityOnRiver = false;
+        for (const river of this.rivers) {
+          if (pointNearRiver(cx, cy, river, 50)) { cityOnRiver = true; break; }
+        }
+        if (!cityOnRiver) {
+          const city = { id: this.cities.length, x: cx, y: cy, hp: 1, owner: null, hasEmperor: false, isMountainCity: true, mountainId: mtn.id };
+          this.cities.push(city);
+          mtn.cityId = city.id;
+        }
+      }
+      this.mountains.push(mtn);
+    }
+  }
+
+  bindEvents() {
+    // 桌面端鼠标事件
+    this.canvas.addEventListener('mousedown', e => this.onMouseDown(e));
+    this.canvas.addEventListener('mousemove', e => this.onMouseMove(e));
+    this.canvas.addEventListener('mouseup', e => this.onMouseUp(e));
+    this.canvas.addEventListener('contextmenu', e => { e.preventDefault(); });
+    this.canvas.addEventListener('wheel', e => this.onWheel(e), { passive: false });
+
+    // 移动端触摸事件（所有设备都注册）
+    this.canvas.addEventListener('touchstart', e => this.onTouchStart(e), { passive: false });
+    this.canvas.addEventListener('touchmove', e => this.onTouchMove(e), { passive: false });
+    this.canvas.addEventListener('touchend', e => this.onTouchEnd(e), { passive: false });
+    this.canvas.addEventListener('touchcancel', e => this.onTouchEnd(e), { passive: false });
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        this.setMode(null);
+        this.selectedCannon = null;
+        this.selectedCity = null;
+        this.dragStart = null;
+        this.dragCurrent = null;
+        this.supplyDragPoints = null;
+        this.render();
+      }
+    });
+  }
+
+  getMousePos(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+    const sx = (e.clientX - rect.left) * scaleX;
+    const sy = (e.clientY - rect.top) * scaleY;
+    return { x: sx / this.camera.zoom + this.camera.x, y: sy / this.camera.zoom + this.camera.y };
+  }
+
+  // 移动端：获取触摸位置
+  getTouchPos(e, touch) {
+    const rect = this.canvas.getBoundingClientRect();
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+    const sx = (touch.clientX - rect.left) * scaleX;
+    const sy = (touch.clientY - rect.top) * scaleY;
+    return { x: sx / this.camera.zoom + this.camera.x, y: sy / this.camera.zoom + this.camera.y };
+  }
+
+  // 移动端：触摸开始
+  onTouchStart(e) {
+    e.preventDefault();
+    if (this._edit && e.touches.length === 1) { this._editPointerDown(this.getTouchPos(e, e.touches[0])); return; }
+    // AI回合时禁止触摸操作（双指缩放除外）
+    if (this.aiThinking && e.touches.length !== 2) return;
+    // 联机：非自己回合禁止操作（双指缩放除外）
+    if (this.gameMode === 'online' && this.currentPlayer !== this.myPlayerIndex && e.touches.length !== 2) return;
+
+    // 双指缩放
+    if (e.touches.length === 2) {
+      this.pinchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      this.pinchStartZoom = this.camera.zoom;
+      this._lastMidX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      this._lastMidY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      return;
+    }
+    if (e.touches.length !== 1) return;
+
+    const touch = e.touches[0];
+    const pos = this.getTouchPos(e, touch);
+
+    // 联机皇帝放置：标记此触摸，在 touchend 判断是否为轻触
+    const isEmperorTap = (this.gameMode === 'online' && this._emperorClickHandler);
+    if (isEmperorTap) {
+      this.touchState = {
+        active: true,
+        startX: pos.x,
+        startY: pos.y,
+        startTime: Date.now(),
+        isLongPress: false,
+        touchId: touch.identifier,
+        _emperorTap: true
+      };
+    }
+
+    // 无模式或pan模式：单指平移
+    if (!this.mode || this.mode === 'pan') {
+      this.isPanning = true;
+      this.panStart = { x: pos.x, y: pos.y };
+      return;
+    }
+
+    this.touchState = {
+      active: true,
+      startX: pos.x,
+      startY: pos.y,
+      startTime: Date.now(),
+      isLongPress: false,
+      touchId: touch.identifier
+    };
+
+    // 清除之前的定时器
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+    }
+
+    // 设置长按定时器
+    this.longPressTimer = setTimeout(() => {
+      if (this.touchState.active && !this.touchState.isLongPress) {
+        this.touchState.isLongPress = true;
+        this.onTouchLongPressStart();
+      }
+    }, this.LONG_PRESS_DURATION);
+  }
+
+  // 移动端：触摸移动
+  onTouchMove(e) {
+    e.preventDefault();
+    if (this._edit && e.touches.length === 1) { this._editPointerMove(this.getTouchPos(e, e.touches[0])); return; }
+    // 双指缩放
+    if (e.touches.length === 2 && this.pinchStartDist > 0) {
+      const d = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const oldZoom = this.camera.zoom;
+      const newZoom = Math.max(0.15, Math.min(3, this.pinchStartZoom * (d / this.pinchStartDist)));
+      const cx = CONFIG.MAP_W / 2, cy = CONFIG.MAP_H / 2;
+      this.camera.x = cx / oldZoom + this.camera.x - cx / newZoom;
+      this.camera.y = cy / oldZoom + this.camera.y - cy / newZoom;
+      this.camera.zoom = newZoom;
+      this.clampCamera();
+      this.render();
+      return;
+    }
+    // 单指平移
+    if (this.isPanning && e.touches.length === 1) {
+      const pos = this.getTouchPos(e, e.touches[0]);
+      const dx = this.panStart.x - pos.x;
+      const dy = this.panStart.y - pos.y;
+      this.camera.x += dx;
+      this.camera.y += dy;
+      this.panStart = { x: pos.x, y: pos.y };
+      this.clampCamera();
+      this.render();
+      return;
+    }
+    if (!this.touchState.active || this.touchState.touchId === null) return;
+
+    // 找到对应的触摸点
+    let touch = null;
+    for (let i = 0; i < e.touches.length; i++) {
+      if (e.touches[i].identifier === this.touchState.touchId) {
+        touch = e.touches[i];
+        break;
+      }
+    }
+    if (!touch) return;
+
+    const pos = this.getTouchPos(e, touch);
+    const dx = pos.x - this.touchState.startX;
+    const dy = pos.y - this.touchState.startY;
+    const moveDist = Math.hypot(dx, dy);
+
+    // 移动超过阈值，取消长按定时器
+    if (moveDist > this.LONG_PRESS_MOVE_THRESHOLD) {
+      if (this.longPressTimer) {
+        clearTimeout(this.longPressTimer);
+        this.longPressTimer = null;
+      }
+    }
+
+    // 如果已经是长按模式，模拟右键拖拽
+    if (this.touchState.isLongPress) {
+      this.dragCurrent = pos;
+      // 续粮线/引线模式：记录自由轨迹点
+      if ((this.mode === 'supply' || this.mode === 'wire') && this.supplyDragPoints) {
+        this.supplyDragPoints.push({ x: pos.x, y: pos.y });
+      }
+      this.render();
+    }
+  }
+
+  // 移动端：触摸结束
+  onTouchEnd(e) {
+    e.preventDefault();
+    if (this._edit) { this._editPointerUp(this.getTouchPos(e, e.changedTouches[0])); return; }
+    // 联机皇帝放置：轻触（没拖动）时触发，拖动了就当平移
+    if (this.touchState.active && this.touchState._emperorTap && this._emperorClickHandler) {
+      const dur = Date.now() - this.touchState.startTime;
+      const dx = this.panStart ? (this.touchState.startX - this.panStart.x) : 0;
+      const dy = this.panStart ? (this.touchState.startY - this.panStart.y) : 0;
+      if (dur < 500 && Math.abs(dx) < 15 && Math.abs(dy) < 15) {
+        this.isPanning = false;
+        this.touchState.active = false;
+        this._emperorClickHandler({ x: this.touchState.startX, y: this.touchState.startY });
+        return;
+      }
+    }
+
+    // 结束平移或缩放
+    if (this.isPanning) {
+      this.isPanning = false;
+      return;
+    }
+    this.pinchStartDist = 0;
+
+    // 清除长按定时器
+    if (this.longPressTimer) {
+      clearTimeout(this.longPressTimer);
+      this.longPressTimer = null;
+    }
+
+    if (!this.touchState.active) return;
+
+    const duration = Date.now() - this.touchState.startTime;
+    const pos = { x: this.touchState.startX, y: this.touchState.startY };
+
+    // 如果是长按模式，结束拖拽
+    if (this.touchState.isLongPress) {
+      // 找到结束时的触摸点
+      let touch = null;
+      if (e.changedTouches.length > 0) {
+        for (let i = 0; i < e.changedTouches.length; i++) {
+          if (e.changedTouches[i].identifier === this.touchState.touchId) {
+            touch = e.changedTouches[i];
+            break;
+          }
+        }
+      }
+      if (touch) {
+        this.dragCurrent = this.getTouchPos(e, touch);
+      }
+      this.onTouchLongPressEnd();
+    } else if (duration < this.LONG_PRESS_DURATION) {
+      // 短按 = 左键点击
+      if (this.state === 'setup') {
+        this.handleSetupClick(pos);
+      } else {
+        this.handleLeftClick(pos);
+      }
+    }
+
+    this.touchState = {
+      active: false,
+      startX: 0,
+      startY: 0,
+      startTime: 0,
+      isLongPress: false,
+      touchId: null
+    };
+  }
+
+  // 长按开始 = 右键按下
+  onTouchLongPressStart() {
+    const pos = { x: this.touchState.startX, y: this.touchState.startY };
+    if (this.state !== 'playing') return;
+
+    if (this.mode === 'supply') {
+      this.startSupplyDrag(pos);
+    } else if (this.mode === 'wire') {
+      this.startWireDrag(pos);
+    } else {
+      this.startTroopDeploy(pos);
+    }
+  }
+
+  // 长按结束 = 右键松开
+  onTouchLongPressEnd() {
+    if (this.mode === 'supply') {
+      this.finishSupplyDrag();
+    } else if (this.mode === 'wire') {
+      this.finishWireDrag();
+    } else {
+      this.finishTroopDeploy();
+    }
+  }
+
+  onMouseDown(e) {
+    const pos = this.getMousePos(e);
+    if (this._edit) { this._editPointerDown(pos); return; }
+    if (this.state === 'setup') {
+      this.handleSetupClick(pos);
+      return;
+    }
+    // 联机皇帝放置：记录位置，区分点击和拖拽
+    if (this.gameMode === 'online' && this._emperorClickHandler && e.button === 0) {
+      this._emperorDragStart = { x: pos.x, y: pos.y };
+      return;
+    }
+    if (this.state !== 'playing') return;
+    if (this.aiThinking) return; // AI回合时禁止玩家操作
+    if (this.gameMode === 'online' && this.currentPlayer !== this.myPlayerIndex) return; // 联机：非自己回合
+
+    // 移动地图模式：左键平移；中键始终可以平移
+    if ((e.button === 0 && this.mode === 'pan') || e.button === 1) {
+      // 检查是否在 drag 状态中（右键拖拽中）
+      if (!this.dragStart) {
+        this.isPanning = true;
+        this.panStart = { x: pos.x, y: pos.y };
+        this.canvas.style.cursor = 'grabbing';
+        return;
+      }
+    }
+
+    if (e.button === 2) {
+      if (this.mode === 'supply') {
+        this.startSupplyDrag(pos);
+      } else if (this.mode === 'wire') {
+        this.startWireDrag(pos);
+      } else {
+        this.startTroopDeploy(pos);
+      }
+    } else if (e.button === 0) {
+      this.handleLeftClick(pos);
+    }
+  }
+
+  onMouseMove(e) {
+    const pos = this.getMousePos(e);
+    if (this._edit) { this._editPointerMove(pos); return; }
+    // 皇帝放置模式：检测拖拽，转为平移
+    if (this._emperorDragStart && this._emperorClickHandler) {
+      const dx = pos.x - this._emperorDragStart.x;
+      const dy = pos.y - this._emperorDragStart.y;
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        this.isPanning = true;
+        this.panStart = { ...this._emperorDragStart };
+        this._emperorDragStart = null;
+      }
+    }
+    if (this.isPanning) {
+      const dx = this.panStart.x - pos.x;
+      const dy = this.panStart.y - pos.y;
+      this.camera.x += dx;
+      this.camera.y += dy;
+      this.panStart = { x: pos.x, y: pos.y };
+      this.clampCamera();
+      this.render();
+      return;
+    }
+    if (this.dragStart) {
+      this.dragCurrent = pos;
+      if ((this.mode === 'supply' || this.mode === 'wire') && this.supplyDragPoints) {
+        this.supplyDragPoints.push({ ...this.dragCurrent });
+      }
+      this.render();
+    }
+  }
+
+  onMouseUp(e) {
+    if (this._edit) { this._editPointerUp(this.getMousePos(e)); return; }
+    // 皇帝放置模式：没有拖拽则触发点击
+    if (this._emperorDragStart && this._emperorClickHandler) {
+      const pos = this._emperorDragStart;
+      this._emperorDragStart = null;
+      this._emperorClickHandler(pos);
+      return;
+    }
+    if (this.isPanning) {
+      this.isPanning = false;
+      this.canvas.style.cursor = 'crosshair';
+      return;
+    }
+    if (!this.dragStart || !this.dragCurrent) return;
+    if (this.mode === 'supply') {
+      this.finishSupplyDrag();
+    } else if (this.mode === 'wire') {
+      this.finishWireDrag();
+    } else {
+      this.finishTroopDeploy();
+    }
+  }
+
+  onWheel(e) {
+    e.preventDefault();
+    const oldZoom = this.camera.zoom;
+    const delta = e.deltaY > 0 ? -0.12 : 0.12;
+    const newZoom = Math.max(0.15, Math.min(3, oldZoom + delta));
+    // 以屏幕中心为锚点缩放，画面不漂移
+    const cx = CONFIG.MAP_W / 2, cy = CONFIG.MAP_H / 2;
+    this.camera.x = cx / oldZoom + this.camera.x - cx / newZoom;
+    this.camera.y = cy / oldZoom + this.camera.y - cy / newZoom;
+    this.camera.zoom = newZoom;
+    this.clampCamera();
+    this.render();
+  }
+
+  clampCamera() {
+    const z = this.camera.zoom;
+    const vw = CONFIG.MAP_W / z, vh = CONFIG.MAP_H / z;
+    this.camera.x = Math.max(0, Math.min(CONFIG.MAP_W - vw, this.camera.x));
+    this.camera.y = Math.max(0, Math.min(CONFIG.MAP_H - vh, this.camera.y));
+  }
+
+  updateEmperorPrompt() {
+    if (this.setupPlayer < CONFIG.PLAYERS) {
+      document.getElementById('emperorText').textContent =
+        `玩家 ${this.setupPlayer + 1} (${CONFIG.COLOR_NAMES[this.setupPlayer]}) - 请点击一座空城放置皇帝`;
+      document.getElementById('emperorTitle').style.color = CONFIG.COLORS[this.setupPlayer];
+    }
+  }
+
+  handleSetupClick(pos) {
+    let clicked = false;
+    for (const city of this.cities) {
+      if (distToPoint(pos.x, pos.y, city.x, city.y) < 35) {
+        if (city.owner !== null) {
+          this.setActionText('这座城池已被占用，请选择空城（灰色）');
+          return;
+        }
+        city.owner = this.setupPlayer;
+        city.hp = 5;
+        city.hasEmperor = true;
+        this.players[this.setupPlayer].emperorCityId = city.id;
+        this.players[this.setupPlayer].cities.push(city.id);
+        this.setActionText(`${CONFIG.COLOR_NAMES[this.setupPlayer]} 皇帝放置成功！`);
+
+        this.setupPlayer++;
+        if (this.setupPlayer >= CONFIG.PLAYERS) {
+          document.getElementById('emperorPrompt').style.display = 'none';
+          this.state = 'playing';
+          this.updateUI();
+          // AI模式：第一个如果是AI则自动开始
+          if (this.gameMode === 'ai' && !this.players[0].isHuman) {
+            setTimeout(() => this.startAITurn(), 800);
+          }
+        } else {
+          this.updateEmperorPrompt();
+          // AI模式：下一个setup玩家是AI则自动
+          if (this.gameMode === 'ai' && !this.players[this.setupPlayer].isHuman) {
+            setTimeout(() => this.aiAutoSetup(), 500);
+          }
+        }
+        this.render();
+        clicked = true;
+        break;
+      }
+    }
+    if (!clicked) {
+      this.setActionText('请点击空城放置皇帝（灰色城池）');
+    }
+  }
+
+  handleLeftClick(pos) {
+    if (!this.mode) {
+      this.selectedCity = null;
+      this.selectedBuilding = null;
+      for (const city of this.cities) {
+        if (distToPoint(pos.x, pos.y, city.x, city.y) < 30) {
+          this.selectedCity = city;
+          break;
+        }
+      }
+      this.render();
+      return;
+    }
+
+    switch (this.mode) {
+      case 'factory': this.tryBuildFactory(pos); break;
+      case 'rope': this.tryBuildRope(pos); break;
+      case 'dock': this.tryBuildDock(pos); break;
+      case 'ship': this.tryBuildShip(pos); break;
+      case 'cannon': this.tryBuildCannon(pos); break;
+      case 'cavalry': this.tryPlaceCavalry(pos); break;
+      case 'supply': this.setActionText('长按右键从城池画到兵线'); break;
+      case 'moveEmperor': this.tryMoveEmperor(pos); break;
+      case 'burnRope': this.tryBurnRope(pos); break;
+      case 'attack': this.tryCannonAttack(pos); break;
+    }
+  }
+
+  startTroopDeploy(pos) {
+    if (this.state !== 'playing') return;
+    let origin = null, originType = null, originTroopId = null, isTroopEnd = false;
+
+    // 检查城池
+    for (const city of this.cities) {
+      if (city.owner === this.currentPlayer && distToPoint(pos.x, pos.y, city.x, city.y) < 35) {
+        origin = city; originType = 'city'; break;
+      }
+    }
+
+    // 检查工厂
+    if (!origin) {
+      for (const f of this.factories) {
+        if (f.owner === this.currentPlayer && distToPoint(pos.x, pos.y, f.x, f.y) < 30) {
+          origin = f; originType = 'factory'; break;
+        }
+      }
+    }
+
+    // 检查船（点击船身或出兵圆点均可）
+    if (!origin) {
+      for (const s of this.ships) {
+        const sx = s.spawnX || s.x, sy = s.spawnY || s.y;
+        if (s.owner === this.currentPlayer && distToPoint(pos.x, pos.y, sx, sy) < 25) {
+          origin = { x: sx, y: sy, id: s.id, shipRef: s };
+          originType = 'ship'; break;
+        }
+      }
+    }
+
+    // 检查骑兵单位的出兵圆点
+    if (!origin) {
+      for (const cv of this.cavalryUnits) {
+        if (cv.owner === this.currentPlayer && distToPoint(pos.x, pos.y, cv.spawnX, cv.spawnY) < 20) {
+          if (cv.hasTroop) {
+            this.setActionText('该骑兵已经出兵了');
+            return;
+          }
+          origin = { x: cv.spawnX, y: cv.spawnY, id: cv.id };
+          originType = 'cavalryUnit';
+          break;
+        }
+      }
+    }
+
+    // 检查兵线（用于延伸/分支）
+    if (!origin) {
+      for (const troop of this.troops) {
+        if (troop.owner !== this.currentPlayer) continue;
+        // 骑兵兵线只能被自身检测（自身可延伸，但不能从骑兵兵线分叉）
+        for (let i = 0; i < troop.points.length; i++) {
+          if (distToPoint(pos.x, pos.y, troop.points[i].x, troop.points[i].y) < 15) {
+            origin = { x: troop.points[i].x, y: troop.points[i].y };
+            originType = 'troop';
+            originTroopId = troop.id;
+            isTroopEnd = (i === troop.points.length - 1);
+            break;
+          }
+        }
+        if (origin) break;
+      }
+    }
+
+    if (origin) {
+      if (originType === 'ship') {
+        const shipRef = origin.shipRef || origin;
+        const hasTroop = this.troops.some(t => t.shipId === shipRef.id && t.owner === this.currentPlayer);
+        if (hasTroop) { this.setActionText('这艘船已经有兵线在运输了'); return; }
+      }
+      this.dragStart = { x: origin.x, y: origin.y, origin, originType, originTroopId, isTroopEnd };
+      this.dragCurrent = pos;
+    } else {
+      const hint = this.isMobile ? '长按' : '右键';
+      this.setActionText(`请${hint}点击我方城池、工厂、船、骑兵圆点或兵线`);
+    }
+  }
+
+  finishTroopDeploy() {
+    if (!this.dragStart || !this.dragCurrent) { this.dragStart = null; this.dragCurrent = null; return false; }
+    const start = this.dragStart;
+    const end = this.dragCurrent;
+    const dx = end.x - start.x, dy = end.y - start.y;
+    const length = Math.hypot(dx, dy);
+    const MAX_LEN = 250;
+    let maxLen = Math.min(length, MAX_LEN);
+    if (maxLen < 20) {
+      if (this.aiThinking) this.aiLog('err', `出兵线长度太短(${Math.round(maxLen)}px)，取消`);
+      this.dragStart = null; this.dragCurrent = null; this.render(); return false;
+    }
+
+    // 拉弓式出兵：射击方向 = 拖拽反方向
+    let shootAngle = Math.atan2(dy, dx) + Math.PI;
+
+    // 40% 概率：方向偏离 3-20°，距离增减 5-10
+    if (Math.random() < 0.4) {
+      const angleDev = (3 + Math.random() * 17) * Math.PI / 180; // 3-20° 转弧度
+      shootAngle += Math.random() < 0.5 ? angleDev : -angleDev;
+      const lenMod = (5 + Math.random() * 5) * (Math.random() < 0.5 ? 1 : -1); // ±5-10
+      maxLen = Math.max(20, Math.min(MAX_LEN, maxLen + lenMod));
+    }
+
+    let destX = start.x + Math.cos(shootAngle) * maxLen;
+    let destY = start.y + Math.sin(shootAngle) * maxLen;
+
+    const isEndExtend = (start.originType === 'troop' && start.isTroopEnd);
+    let targetTroop = null;
+
+    if (isEndExtend) {
+      targetTroop = this.troops.find(t => t.id === start.originTroopId);
+      if (!targetTroop) { this.dragStart = null; this.dragCurrent = null; this.render(); return false; }
+      const currentSegments = targetTroop.segCount || (targetTroop.points.length - 1);
+      if (currentSegments >= targetTroop.maxSegments) {
+        this.setActionText(`这条兵线已有${currentSegments}段，上限${targetTroop.maxSegments}段，需续粮才能延伸`);
+        if (this.aiThinking) this.aiLog('err', `兵线${currentSegments}段已满，取消`);
+        this.dragStart = null; this.dragCurrent = null; this.render(); return false;
+      }
+    } else {
+      let allowedMaxSegments = CONFIG.SUPPLY_SEGMENTS;
+      if (start.originTroopId !== null && start.originTroopId !== undefined) {
+        const parentTroop = this.troops.find(t => t.id === start.originTroopId);
+        if (parentTroop) {
+          if (parentTroop.type === 'cavalry') {
+            this.setActionText('骑兵兵线不能分叉');
+            if (this.aiThinking) this.aiLog('err', '骑兵兵线不能分叉，取消');
+            this.dragStart = null; this.dragCurrent = null; this.render(); return false;
+          }
+          allowedMaxSegments = parentTroop.maxSegments;
+        }
+      }
+      if (allowedMaxSegments <= 0) {
+        this.setActionText('兵线段数已满，需续粮才能延伸');
+        if (this.aiThinking) this.aiLog('err', '兵线段数已满，取消');
+        this.dragStart = null; this.dragCurrent = null; this.render(); return false;
+      }
+    }
+
+    let points = [{ x: start.x, y: start.y }, { x: destX, y: destY }];
+
+    // 山体检测
+    let valid = true;
+    for (let i = 0; i < points.length - 1 && valid; i++) {
+      for (const mtn of this.mountains) {
+        if (this.lineCrossesMountain(points[i], points[i+1], mtn)) {
+          if (!mtn.hasRope) {
+            valid = false;
+            this.setActionText('兵线不能横穿山体！修建绳子或顺坡而行');
+            break;
+          }
+        }
+      }
+    }
+    if (!valid) {
+      if (this.aiThinking) this.aiLog('err', '兵线被山体阻挡，取消');
+      this.dragStart = null; this.dragCurrent = null; this.render(); return false;
+    }
+
+    // 河流处理：水军（shipId存在）可从河上岸，不拦
+    const isShipTroop = start.originType === 'ship' || (targetTroop && targetTroop.shipId != null);
+    if (!isShipTroop) {
+      for (const river of this.rivers) {
+        if (this.lineCrossesRiver(points[0], points[1], river)) {
+          // 检查是否经过桥
+          let crossedBridge = false;
+          for (const br of river.bridges) {
+            // 兵线端点离桥25px以内，视为从桥上过
+            if (Math.hypot(destX - br.x, destY - br.y) < 50 ||
+                Math.hypot(points[0].x - br.x, points[0].y - br.y) < 50 ||
+                lineCircleMinDist(points[0].x, points[0].y, destX, destY, br.x, br.y) < 40) {
+              crossedBridge = true;
+              break;
+            }
+          }
+          if (!crossedBridge) {
+            this.setActionText('兵线不能穿过河流！请从桥上通过');
+            if (this.aiThinking) this.aiLog('err', '兵线试图穿河，取消');
+            this.dragStart = null; this.dragCurrent = null; this.render(); return false;
+          }
+        }
+      }
+    }
+
+    if (isEndExtend) {
+      targetTroop.points.push({ x: destX, y: destY });
+      targetTroop.segCount = (targetTroop.segCount || (targetTroop.points.length - 2)) + 1;
+    } else {
+      let originId = null;
+      if (start.originTroopId !== null && start.originTroopId !== undefined) {
+        originId = start.originTroopId;
+      } else if (start.origin && start.origin.id !== undefined) {
+        originId = start.origin.id;
+      }
+
+      let allowedMaxSegments = CONFIG.SUPPLY_SEGMENTS;
+      if (start.originTroopId !== null && start.originTroopId !== undefined) {
+        const parentTroop = this.troops.find(t => t.id === start.originTroopId);
+        if (parentTroop) allowedMaxSegments = parentTroop.maxSegments;
+      }
+
+      const isCavalry = start.originType === 'cavalryUnit';
+
+      // 城池最多出3条兵线
+      if (start.originType === 'city' && start.origin && start.origin.id !== undefined) {
+        const cityTroops = this.troops.filter(t => t.originId === start.origin.id && t.originType === 'city' && t.hp > 0);
+        if (cityTroops.length >= 3) {
+          this.setActionText('此城池已出兵3条，无法再从该城出兵');
+          if (this.aiThinking) this.aiLog('err', '城池' + start.origin.id + '已满3条兵线，取消');
+          this.dragStart = null; this.dragCurrent = null; this.render(); return false;
+        }
+      }
+      targetTroop = {
+        id: this.troops.length, owner: this.currentPlayer,
+        points, hp: isCavalry ? CONFIG.CAVALRY_HP : CONFIG.TROOP_HP,
+        atk: isCavalry ? CONFIG.CAVALRY_ATK : CONFIG.TROOP_ATK,
+        type: isCavalry ? 'cavalry' : 'basic',
+        originId: originId, originType: start.originType,
+        shipId: start.originType === 'ship' ? (start.origin.shipRef ? start.origin.shipRef.id : start.origin.id) : null,
+        maxSegments: allowedMaxSegments, supplyExtended: false,
+        segCount: 1
+      };
+      this.troops.push(targetTroop);
+
+      if (isCavalry && start.origin && start.origin.id !== undefined) {
+        const cv = this.cavalryUnits.find(c => c.id === start.origin.id);
+        if (cv) cv.hasTroop = true;
+      }
+    }
+
+    // 统一攻击碰撞检测
+    this.resolveTroopAttack(targetTroop);
+
+    this.checkCombat();
+    this.dragStart = null;
+    this.dragCurrent = null;
+    if (!this.aiThinking && !this._isRemoteAction) this.autoNextTurn();
+    return true;
+  }
+
+  _onlineEndTurn() {
+    this.troops = this.troops.filter(t => t.hp > 0);
+    this.combatEvents = [];
+    this.checkWinCondition();
+    if (this.state === 'gameover') return;
+    this.currentPlayer = (this.currentPlayer + 1) % CONFIG.PLAYERS;
+    if (this.currentPlayer === 0) this.turn++;
+    while (!this.players[this.currentPlayer].alive) {
+      this.currentPlayer = (this.currentPlayer + 1) % CONFIG.PLAYERS;
+      if (this.currentPlayer === 0) this.turn++;
+    }
+    // 发送完整状态（主机 relay 给其他人；加入者发给主机 relay）
+    this.network.send({
+      type: 'full_state',
+      state: this._serializeState(),
+      currentPlayer: this.currentPlayer,
+      turn: this.turn
+    });
+    this._syncTurnState();
+    this.setMode(null); this.render();
+  }
+
+  _serializeState() {
+    return {
+      cities: this.cities.map(c => ({ id: c.id, owner: c.owner, hp: c.hp, hasEmperor: c.hasEmperor, x: c.x, y: c.y, isMountainCity: c.isMountainCity || false, mountainId: c.mountainId || undefined })),
+      troops: this.troops.map(t => ({ id: t.id, owner: t.owner, points: t.points, hp: t.hp, atk: t.atk, type: t.type, originType: t.originType, originId: t.originId, maxSegments: t.maxSegments, segCount: t.segCount, supplyExtended: t.supplyExtended, shipId: t.shipId })),
+      factories: this.factories.map(f => ({ id: f.id, cityId: f.cityId, x: f.x, y: f.y, owner: f.owner, hp: f.hp })),
+      cannons: this.cannons.map(c => ({ id: c.id, x: c.x, y: c.y, owner: c.owner, hp: c.hp })),
+      cavalryUnits: this.cavalryUnits.map(c => ({ id: c.id, x: c.x, y: c.y, spawnX: c.spawnX, spawnY: c.spawnY, owner: c.owner, hp: c.hp, hasTroop: c.hasTroop })),
+      docks: this.docks.map(d => ({ id: d.id, x: d.x, y: d.y, owner: d.owner, riverId: d.riverId })),
+      ships: this.ships.map(s => ({ id: s.id, dockId: s.dockId, x: s.x, y: s.y, owner: s.owner, spawnX: s.spawnX, spawnY: s.spawnY })),
+      wires: this.wires.map(w => ({ id: w.id, factoryId: w.factoryId, cannonId: w.cannonId, owner: w.owner, points: w.points, hp: w.hp })),
+      supplyLines: this.supplyLines.map(s => ({ id: s.id, owner: s.owner, troopId: s.troopId, cityId: s.cityId, points: s.points, hp: s.hp })),
+      mountains: this.mountains.map(m => ({ id: m.id, hasRope: m.hasRope, ropeOwner: m.ropeOwner })),
+      players: this.players.map(p => ({ alive: p.alive, isHuman: p.isHuman, emperorCityId: p.emperorCityId, cities: p.cities, factories: p.factories }))
+    };
+  }
+
+  _applyState(state) {
+    // 正确恢复城市：用 state 中保存的 x/y，不再从 this.cities 索引读取
+    this.cities = state.cities.map(c => ({
+      id: c.id, owner: c.owner, hp: c.hp, hasEmperor: c.hasEmperor,
+      x: c.x, y: c.y,
+      isMountainCity: c.isMountainCity || false,
+      mountainId: c.mountainId || undefined
+    }));
+    this.troops = state.troops;
+    this.factories = state.factories;
+    this.cannons = state.cannons;
+    this.cavalryUnits = state.cavalryUnits;
+    this.docks = state.docks;
+    this.ships = state.ships;
+    this.wires = state.wires;
+    this.supplyLines = state.supplyLines;
+    this.combatEvents = [];
+    this.aiHighlightTarget = null;
+    for (const m of state.mountains) {
+      if (this.mountains[m.id]) {
+        this.mountains[m.id].hasRope = m.hasRope;
+        this.mountains[m.id].ropeOwner = m.ropeOwner;
+      }
+    }
+    // 正确恢复玩家数据：cities/factories 是数字数组（城市/工厂ID列表）
+    this.players = this.players.map((p, i) => ({
+      ...p,
+      alive: state.players[i].alive,
+      isHuman: state.players[i].isHuman,
+      emperorCityId: state.players[i].emperorCityId,
+      cities: state.players[i].cities || [],
+      factories: state.players[i].factories || []
+    }));
+  }
+
+  // ============================================================
+  // resolveTroopAttack - 统一处理兵线对目标的攻击判定
+  // ============================================================
+  resolveTroopAttack(troop) {
+    const pts = troop.points;
+    const CITY_R = 40;
+    const CANNON_R = 30;
+
+    let originCityId = null;
+    for (const city of this.cities) {
+      if (city.owner === this.currentPlayer && distToPoint(pts[0].x, pts[0].y, city.x, city.y) < CITY_R) {
+        originCityId = city.id;
+        break;
+      }
+    }
+
+    let hitSomething = false;
+
+    // 1. 路径攻击：线段穿过敌方城市碰撞圆
+    let hitCity = false;
+    let nearestCity = null, nearestDist = Infinity;
+    for (const city of this.cities) {
+      if (city.id === originCityId) continue;
+      if (city.owner === this.currentPlayer) continue;
+      if (!pathTouchesCircle(pts, city.x, city.y, CITY_R)) continue;
+      let d = Infinity;
+      for (let i = 0; i < pts.length - 1; i++) {
+        d = Math.min(d, lineCircleMinDist(pts[i].x, pts[i].y, pts[i+1].x, pts[i+1].y, city.x, city.y));
+      }
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearestCity = city;
+      }
+    }
+    if (nearestCity) {
+      hitCity = true;
+      if (nearestCity.owner === null) {
+        nearestCity.owner = this.currentPlayer;
+        nearestCity.hp = 5;
+        this.players[this.currentPlayer].cities.push(nearestCity.id);
+        this.setActionText(`占领空城！城池血量: ${nearestCity.hp}`);
+      } else if (nearestCity.owner !== this.currentPlayer) {
+        hitSomething = true;
+        const damage = Math.max(1, troop.atk);
+        nearestCity.hp -= damage;
+        this.setActionText(`${troop.type === 'cavalry' ? '骑兵' : '部队'}攻击${CONFIG.COLOR_NAMES[nearestCity.owner]}城池！-${damage} 剩余: ${nearestCity.hp}`);
+        if (nearestCity.hp <= 0) this.captureCity(nearestCity, this.currentPlayer);
+      }
+    }
+
+    // 2. 大炮攻击
+    if (!hitCity) {
+      for (let ci = this.cannons.length - 1; ci >= 0; ci--) {
+        const c = this.cannons[ci];
+        if (c.owner === this.currentPlayer) continue;
+        if (pathTouchesCircle(pts, c.x, c.y, CANNON_R)) {
+          hitSomething = true;
+          c.hp -= troop.atk;
+          if (c.hp <= 0) {
+            const cannonId = c.id;
+            this.cannons.splice(ci, 1);
+            // 同时删除连接该大炮的引线
+            this.wires = this.wires.filter(w => w.cannonId !== cannonId);
+            this.setActionText('摧毁敌方大炮及引线！');
+          } else {
+            this.setActionText(`攻击敌方大炮！剩余血量: ${c.hp}`);
+          }
+          break;
+        }
+      }
+    }
+
+    // 3. 粮线判断（不受hitSomething限制，独立检测）
+    for (let si = this.supplyLines.length - 1; si >= 0; si--) {
+      const sl = this.supplyLines[si];
+      if (sl.owner === this.currentPlayer) continue;
+      if (this.pathCrossesLines(pts, sl.points, 30)) {
+        hitSomething = true;
+        sl.hp -= troop.atk;
+        if (sl.hp <= 0) {
+          this.supplyLines.splice(si, 1);
+          this.setActionText('切断敌方粮线！');
+          } else {
+            this.setActionText(`攻击粮线！剩余血量: ${sl.hp}`);
+          }
+          break;
+        }
+    }
+
+    // 4. 引线判断（独立检测，不受hitSomething影响）
+    // 使用波浪线采样点进行碰撞检测（与视觉一致）
+    for (let wi = this.wires.length - 1; wi >= 0; wi--) {
+      const w = this.wires[wi];
+      if (w.owner === this.currentPlayer) continue;
+      const wireSampled = this.getSpringLinePoints(w.points, 2, 8);
+      if (wireSampled.length < 2) continue;
+      if (this.pathCrossesLines(pts, wireSampled, 15)) {
+        hitSomething = true;
+        w.hp -= troop.atk;
+        if (w.hp <= 0) {
+          this.wires.splice(wi, 1);
+          this.setActionText('切断敌方引线！');
+        } else {
+          this.setActionText(`攻击引线！剩余血量: ${w.hp}`);
+        }
+        break;
+      }
+    }
+
+    // 5. 骑兵单位判断
+    for (let ci = this.cavalryUnits.length - 1; ci >= 0; ci--) {
+      const cv = this.cavalryUnits[ci];
+      if (cv.owner === this.currentPlayer) continue;
+      if (pathTouchesCircle(pts, cv.x, cv.y, 20)) {
+        hitSomething = true;
+        cv.hp -= troop.atk;
+        if (cv.hp <= 0) {
+          // 骑兵单位被摧毁，同时删除其所有兵线
+          for (let ti = this.troops.length - 1; ti >= 0; ti--) {
+            const t = this.troops[ti];
+            if (t.originType === 'cavalryUnit' && t.originId === cv.id) {
+              this.troops.splice(ti, 1);
+            }
+          }
+          this.cavalryUnits.splice(ci, 1);
+          this.setActionText('摧毁敌方骑兵营地！');
+        } else {
+          this.setActionText(`攻击骑兵营地！剩余血量: ${cv.hp}`);
+        }
+        break;
+      }
+    }
+
+    if (hitSomething) {
+      // 兵线攻击后留在场上（可继续推进或被敌方清除）
+    }
+  }
+
+  // 兵线被删除时，同时清理对应的骑兵单位
+  _destroyCavalryByTroop(troop) {
+    if (troop.type !== 'cavalry' || troop.originType !== 'cavalryUnit') return;
+    const cvIdx = this.cavalryUnits.findIndex(cv => cv.id === troop.originId);
+    if (cvIdx >= 0) {
+      // 检查该骑兵单位是否还有其他兵线
+      const hasOtherTroops = this.troops.some(t =>
+        t !== troop && t.originType === 'cavalryUnit' && t.originId === troop.originId
+      );
+      if (!hasOtherTroops) {
+        this.cavalryUnits.splice(cvIdx, 1);
+      }
+    }
+  }
+
+  lineCrossesMountain(p1, p2, mtn) {
+    const mpts = mtn.points;
+    for (let i = 0; i < mpts.length - 1; i++) {
+      if (linesIntersect(p1, p2, mpts[i], mpts[i+1])) return true;
+    }
+    return false;
+  }
+
+  // 检测一条折线路径是否穿过/靠近另一条折线（线段到线段距离）
+  pathCrossesLines(pathPts, linePts, threshold = 30) {
+    for (let i = 0; i < pathPts.length - 1; i++) {
+      for (let j = 0; j < linePts.length - 1; j++) {
+        const d = this.segmentToSegmentDist(
+          pathPts[i].x, pathPts[i].y, pathPts[i+1].x, pathPts[i+1].y,
+          linePts[j].x, linePts[j].y, linePts[j+1].x, linePts[j+1].y
+        );
+        if (d < threshold) return true;
+      }
+    }
+    return false;
+  }
+
+  lineCrossesRiver(p1, p2, river) {
+    const pts = getRiverPoints(river, 0.03);
+    for (let i = 0; i < pts.length - 1; i++) {
+      if (linesIntersect(p1, p2, pts[i], pts[i+1])) return true;
+    }
+    return false;
+  }
+
+  findRiverBank(p1, p2) {
+    // 二分法找到线段与河流交点附近的岸边点
+    let lo = 0, hi = 1;
+    for (let iter = 0; iter < 10; iter++) {
+      const mid = (lo + hi) / 2;
+      const mx = p1.x + (p2.x - p1.x) * mid;
+      const my = p1.y + (p2.y - p1.y) * mid;
+      if (this.rivers.some(r => pointNearRiver(mx, my, r, 20))) {
+        hi = mid;
+      } else {
+        lo = mid;
+      }
+    }
+    // 停在离河稍远一点的岸边
+    const t = Math.max(0, lo - 0.05);
+    return { x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t };
+  }
+
+  checkCombat() {
+    this.combatEvents = [];
+
+    // 收集交战对（存 ref 不存 index，避免 splice 后索引错乱）
+    const pairs = [];
+    for (let i = 0; i < this.troops.length; i++) {
+      const t1 = this.troops[i];
+      if (t1.hp <= 0) continue;
+      for (let j = i + 1; j < this.troops.length; j++) {
+        const t2 = this.troops[j];
+        if (t2.hp <= 0 || t1.owner === t2.owner) continue;
+
+        let intersectPt = null;
+        let minDist = Infinity;
+        let found = false;
+        for (let a = 0; a < t1.points.length - 1 && !found; a++) {
+          for (let b = 0; b < t2.points.length - 1 && !found; b++) {
+            if (linesIntersect(t1.points[a], t1.points[a+1], t2.points[b], t2.points[b+1])) {
+              intersectPt = {
+                x: (t1.points[a].x + t1.points[a+1].x + t2.points[b].x + t2.points[b+1].x) / 4,
+                y: (t1.points[a].y + t1.points[a+1].y + t2.points[b].y + t2.points[b+1].y) / 4
+              };
+              found = true;
+            }
+            const d = this.segmentToSegmentDist(
+              t1.points[a].x, t1.points[a].y, t1.points[a+1].x, t1.points[a+1].y,
+              t2.points[b].x, t2.points[b].y, t2.points[b+1].x, t2.points[b+1].y
+            );
+            if (d < minDist) minDist = d;
+          }
+        }
+
+        // 只有真正靠近（<6px）或线段交叉才算交战
+        const COMBAT_DIST = 6;
+        if (!found && minDist >= COMBAT_DIST) continue;
+
+        if (!intersectPt) {
+          let bestDist = Infinity;
+          for (let a = 0; a < t1.points.length; a++) {
+            for (let b = 0; b < t2.points.length - 1; b++) {
+              const d = pointToLineDist(t1.points[a].x, t1.points[a].y,
+                t2.points[b].x, t2.points[b].y, t2.points[b+1].x, t2.points[b+1].y);
+              if (d < bestDist) { bestDist = d; intersectPt = t1.points[a]; }
+            }
+          }
+        }
+
+        pairs.push({ t1, t2, point: intersectPt });
+        this.combatEvents.push({
+          point: intersectPt,
+          t1: { owner: t1.owner, atk: t1.atk },
+          t2: { owner: t2.owner, atk: t2.atk }
+        });
+        this.setActionText('⚔️ 交战！' + CONFIG.COLOR_NAMES[t1.owner] + ' vs ' + CONFIG.COLOR_NAMES[t2.owner]);
+      }
+    }
+
+    // 同时结算ATK + 撤退（引用对象，splice后仍正确）
+    for (const p of pairs) {
+      if (p.t1.hp <= 0 || p.t2.hp <= 0) continue;
+      p.t1.hp -= p.t2.atk;
+      p.t2.hp -= p.t1.atk;
+      this._retreatTroopIfDeadRef(p.t1);
+      this._retreatTroopIfDeadRef(p.t2);
+    }
+  }
+
+  _retreatTroopIfDeadRef(troop) {
+    if (!troop || troop.hp > 0) return;
+    const currentSegs = troop.points.length - 1;
+    if (currentSegs <= 1) {
+      this._destroyCavalryByTroop(troop);
+      const idx = this.troops.indexOf(troop);
+      if (idx >= 0) this.troops.splice(idx, 1);
+      this.setActionText(`${CONFIG.COLOR_NAMES[troop.owner]}兵线撤退！`);
+    } else {
+      troop.points.pop();
+      troop.segCount = Math.max(1, (troop.segCount || currentSegs) - 1);
+      troop.hp = troop.type === 'cavalry' ? CONFIG.CAVALRY_HP : CONFIG.TROOP_HP;
+      this.setActionText(`${CONFIG.COLOR_NAMES[troop.owner]}兵线被击败，撤回上次位置！`);
+    }
+  }
+
+  // 兵线撤退（旧接口，兼容现有调用）
+  _retreatTroopIfDead(idx) {
+    const troop = this.troops[idx];
+    if (!troop || troop.hp > 0) return;
+
+    const currentSegs = troop.points.length - 1;
+
+    if (currentSegs <= 1) {
+      this._destroyCavalryByTroop(troop);
+      this.troops.splice(idx, 1);
+      this.setActionText(`${CONFIG.COLOR_NAMES[troop.owner]}兵线撤退！`);
+    } else {
+      troop.points.pop();
+      troop.segCount = Math.max(1, (troop.segCount || currentSegs) - 1);
+      troop.hp = troop.type === 'cavalry' ? CONFIG.CAVALRY_HP : CONFIG.TROOP_HP;
+      this.setActionText(`${CONFIG.COLOR_NAMES[troop.owner]}兵线被击败，撤回上次位置！`);
+    }
+  }
+
+  // 计算两条线段之间的最短距离
+  segmentToSegmentDist(x1, y1, x2, y2, x3, y3, x4, y4) {
+    return Math.min(
+      pointToLineDist(x1, y1, x3, y3, x4, y4),
+      pointToLineDist(x2, y2, x3, y3, x4, y4),
+      pointToLineDist(x3, y3, x1, y1, x2, y2),
+      pointToLineDist(x4, y4, x1, y1, x2, y2)
+    );
+  }
+
+  captureCity(city, attackerId) {
+    const oldOwner = city.owner;
+    city.owner = attackerId;
+    city.hp = 5;
+    if (oldOwner !== null && oldOwner !== undefined) {
+      const oldPlayer = this.players[oldOwner];
+      oldPlayer.cities = oldPlayer.cities.filter(id => id !== city.id);
+
+      // 摧毁被占城的工厂
+      this.factories = this.factories.filter(f => f.cityId !== city.id);
+      oldPlayer.factories = oldPlayer.factories.filter(fid => {
+        const f = this.factories.find(x => x.id === fid);
+        return f && f.cityId !== city.id;
+      });
+
+      // 原主失去所有城→清除其无城工厂
+      if (oldPlayer.cities.length === 0) {
+        this.factories = this.factories.filter(f => f.owner !== oldOwner);
+        oldPlayer.factories = [];
+      }
+
+      // 连接此城的原主兵线回退
+      for (const troop of this.troops) {
+        if (troop.owner !== oldOwner || troop.hp <= 0) continue;
+        const pts = troop.points;
+        if (pts.length < 2) continue;
+        const d0 = Math.hypot(pts[0].x - city.x, pts[0].y - city.y);
+        const dN = Math.hypot(pts[pts.length - 1].x - city.x, pts[pts.length - 1].y - city.y);
+        if (d0 < 45) {
+          pts.shift();
+          if (pts.length === 0) { troop.hp = 0; }
+        } else if (dN < 45) {
+          pts.pop();
+          if (pts.length === 0) { troop.hp = 0; }
+        }
+      }
+      this.troops = this.troops.filter(t => t.hp > 0 && t.points.length >= 2);
+
+      if (city.hasEmperor) {
+        city.hasEmperor = false;
+        oldPlayer.emperorCityId = null;
+        oldPlayer.alive = false;
+        this.setActionText(`${oldPlayer.name} 的国家灭亡了！`);
+        this.troops = this.troops.filter(t => t.owner !== oldOwner);
+        this.factories = this.factories.filter(f => f.owner !== oldOwner);
+        this.docks = this.docks.filter(d => d.owner !== oldOwner);
+        this.ships = this.ships.filter(s => s.owner !== oldOwner);
+        this.cannons = this.cannons.filter(c => c.owner !== oldOwner);
+        this.cavalryUnits = this.cavalryUnits.filter(cv => cv.owner !== oldOwner);
+        this.supplyLines = this.supplyLines.filter(sl => sl.owner !== oldOwner);
+        this.wires = this.wires.filter(w => w.owner !== oldOwner);
+        for (const c of this.cities) {
+          if (c.owner === oldOwner) { c.owner = null; c.hp = 1; c.hasEmperor = false; }
+        }
+      }
+    }
+    this.players[attackerId].cities.push(city.id);
+    this.checkWinCondition();
+  }
+
+  tryBuildFactory(pos) {
+    const player = this.players[this.currentPlayer];
+    for (const city of this.cities) {
+      if (city.owner === this.currentPlayer && distToPoint(pos.x, pos.y, city.x, city.y) < 35) {
+        const exists = this.factories.some(f => f.cityId === city.id);
+        if (exists) { this.setActionText('这座城池已经有工厂了'); return; }
+      this.factories.push({ id: this.factories.length, cityId: city.id, x: city.x + 25, y: city.y - 5, owner: this.currentPlayer, hp: CONFIG.FACTORY_HP });
+      player.factories.push(this.factories.length - 1);
+      this.setActionText('工厂建造完成'); this.autoNextTurn(); return;
+      }
+    }
+    this.setActionText('请点击你占领的城池');
+  }
+
+  tryBuildRope(pos) {
+    for (const mtn of this.mountains) {
+      if (pointOnMountain(pos.x, pos.y, mtn) && !mtn.hasRope) {
+        mtn.hasRope = true; mtn.ropeOwner = this.currentPlayer;
+        this.setActionText('绳子修建完成'); this.autoNextTurn(); return;
+      }
+    }
+    this.setActionText('请点击山体');
+  }
+
+  tryBuildDock(pos) {
+    let hasFactory = false;
+    for (const f of this.factories) {
+      if (f.owner === this.currentPlayer && distToPoint(pos.x, pos.y, f.x, f.y) < 200) { hasFactory = true; break; }
+    }
+    if (!hasFactory) { this.setActionText('需要在河附近有工厂才能修码头'); return; }
+    for (const river of this.rivers) {
+      if (pointNearRiver(pos.x, pos.y, river)) {
+        const exists = this.docks.some(d => distToPoint(pos.x, pos.y, d.x, d.y) < 30);
+        if (exists) { this.setActionText('这里已经有码头了'); return; }
+        this.docks.push({ id: this.docks.length, x: pos.x, y: pos.y, owner: this.currentPlayer, riverId: river.id });
+        this.setActionText('码头修建完成'); this.autoNextTurn(); return;
+      }
+    }
+    this.setActionText('请点击河流');
+  }
+
+  tryBuildShip(pos) {
+    for (const dock of this.docks) {
+      if (dock.owner === this.currentPlayer && distToPoint(pos.x, pos.y, dock.x, dock.y) < 25) {
+        // 计算偏移方向（垂直于码头所在河流）
+        const river = this.rivers.find(r => r.id === dock.riverId);
+        let angle = 0;
+        if (river) {
+          const t = this._findNearestRiverT(dock.x, dock.y, river);
+          angle = getRiverAngleAt(river, t, Math.PI / 2);
+        }
+        const count = this.ships.filter(s => s.dockId === dock.id).length;
+        const offset = 20 + count * 18;
+        const side = count % 2 === 0 ? 1 : -1;
+        let sx = dock.x + Math.cos(angle) * offset * side;
+        let sy = dock.y + Math.sin(angle) * offset * side;
+        // 确保船在河上：如果不靠近河流，往河方向拉回
+        if (!this.rivers.some(r => pointNearRiver(sx, sy, r, 50))) {
+          sx = dock.x + Math.cos(angle) * 8 * side; // 缩小偏移
+          sy = dock.y + Math.sin(angle) * 8 * side;
+        }
+        const spawnX = sx + Math.cos(angle) * 12 * side;
+        const spawnY = sy + Math.sin(angle) * 12 * side;
+        this.ships.push({ id: this.ships.length, dockId: dock.id, x: sx, y: sy, owner: this.currentPlayer, spawnX, spawnY });
+        this.setActionText('船建造完成'); this.autoNextTurn(); return;
+      }
+    }
+    this.setActionText('请点击你修建的码头');
+  }
+
+  tryBuildCannon(pos) {
+    const player = this.players[this.currentPlayer];
+    if (player.factories.length === 0) { this.setActionText('你需要先建造工厂'); return; }
+    this.cannons.push({ id: this.cannons.length, x: pos.x, y: pos.y, owner: this.currentPlayer, hp: CONFIG.CANNON_HP });
+    this.setActionText('大炮建造完成，请用"连引线"连接工厂'); this.autoNextTurn();
+  }
+
+  tryPlaceCavalry(pos) {
+    // 必须在己方工厂附近
+    let nearFactory = false;
+    for (const f of this.factories) {
+      if (f.owner === this.currentPlayer && distToPoint(pos.x, pos.y, f.x, f.y) < 100) {
+        nearFactory = true; break;
+      }
+    }
+    if (!nearFactory) { this.setActionText('骑兵必须放置在己方工厂附近'); return; }
+    this.cavalryUnits.push({
+      id: this.cavalryUnits.length,
+      x: pos.x, y: pos.y,
+      spawnX: pos.x, spawnY: pos.y + 20,
+      owner: this.currentPlayer,
+      hp: CONFIG.CAVALRY_UNIT_HP,
+      hasTroop: false
+    });
+    this.setActionText('骑兵部署完成，从下方圆点出兵'); this.autoNextTurn();
+  }
+
+  // 生成弹簧线的采样点（与drawSpringLine算法一致）
+  getSpringLinePoints(points, amp = 3, seg = 6) {
+    const result = [];
+    for (let i = 0; i < points.length - 1; i++) {
+      const p1 = points[i], p2 = points[i+1];
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      const len = Math.hypot(dx, dy);
+      if (len < 0.1) continue;
+      const nx = -dy / len, ny = dx / len;
+      const steps = Math.max(3, Math.floor(len / 2));
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        const dist = len * t;
+        const wave = Math.sin(dist / seg * Math.PI * 2) * amp;
+        result.push({ x: p1.x + dx * t + nx * wave, y: p1.y + dy * t + ny * wave });
+      }
+    }
+    return result;
+  }
+
+  // 画反波浪弹簧线（导火索样式）
+  drawSpringLine(ctx, points, color, amp = 3, seg = 6, lineWidth = 1.5) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    const sampled = this.getSpringLinePoints(points, amp, seg);
+    if (sampled.length === 0) return;
+    ctx.moveTo(sampled[0].x, sampled[0].y);
+    for (let i = 1; i < sampled.length; i++) ctx.lineTo(sampled[i].x, sampled[i].y);
+    ctx.stroke();
+  }
+
+  drawCavalryHorse(ctx, x, y, color, scale = 1) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(scale * 0.7, scale * 0.7);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(4, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(4, 0); ctx.quadraticCurveTo(6, -4, 10, -6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(2, 0); ctx.lineTo(2, 8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-2, 0); ctx.lineTo(-2, 8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(-6, 8); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-8, 0); ctx.quadraticCurveTo(-12, 2, -14, 6); ctx.stroke();
+    ctx.restore();
+  }
+
+  startSupplyDrag(pos) {
+    // 长按右键开始画粮线
+    this.dragStart = { x: pos.x, y: pos.y, mode: 'supply' };
+    this.dragCurrent = pos;
+    this.supplyDragPoints = [{ x: pos.x, y: pos.y }];
+  }
+
+  finishSupplyDrag() {
+    const start = this.dragStart;
+    const end = this.dragCurrent;
+    const points = this.supplyDragPoints || [{ x: start.x, y: start.y }, { x: end.x, y: end.y }];
+    this.dragStart = null; this.dragCurrent = null;
+    this.supplyDragPoints = null;
+
+    if (points.length < 2) { this.render(); return; }
+
+    // 找起点最近的城池
+    let nearestCity = null, minCityD = Infinity;
+    for (const c of this.cities) {
+      if (c.owner !== this.currentPlayer) continue;
+      const d = distToPoint(points[0].x, points[0].y, c.x, c.y);
+      if (d < minCityD) { minCityD = d; nearestCity = c; }
+    }
+    // 找终点最近的兵线上的点
+    let nearestTroopPt = null, minTroopD = Infinity, targetTroop = null;
+    for (const troop of this.troops) {
+      if (troop.owner !== this.currentPlayer) continue;
+      for (const p of troop.points) {
+        const d = distToPoint(end.x, end.y, p.x, p.y);
+        if (d < minTroopD) { minTroopD = d; nearestTroopPt = p; targetTroop = troop; }
+      }
+    }
+
+    if (!nearestCity) { this.setActionText('附近没有我方城池'); this.render(); return; }
+    if (!targetTroop) { this.setActionText('请把粮线画到兵线上'); this.render(); return; }
+    if (targetTroop.supplyExtended) { this.setActionText('这条兵线已经续过粮了'); this.render(); return; }
+
+    targetTroop.supplyExtended = true;
+    targetTroop.maxSegments += CONFIG.SUPPLY_SEGMENTS;
+
+    // 粮线：从城池到兵线最近点，保留自由轨迹
+    this.supplyLines.push({
+      id: this.supplyLines.length,
+      owner: this.currentPlayer,
+      troopId: targetTroop.id,
+      cityId: nearestCity.id,
+      points: [
+        { x: nearestCity.x, y: nearestCity.y },
+        ...points,
+        { x: nearestTroopPt.x, y: nearestTroopPt.y }
+      ],
+      hp: 1
+    });
+
+    this.setActionText('粮线已连接');
+    this.autoNextTurn();
+  }
+
+  startWireDrag(pos) {
+    this.dragStart = { x: pos.x, y: pos.y, mode: 'wire' };
+    this.dragCurrent = pos;
+    this.supplyDragPoints = [{ x: pos.x, y: pos.y }];
+  }
+
+  finishWireDrag() {
+    const start = this.dragStart;
+    const end = this.dragCurrent;
+    const points = this.supplyDragPoints || [{ x: start.x, y: start.y }, { x: end.x, y: end.y }];
+    this.dragStart = null; this.dragCurrent = null;
+    this.supplyDragPoints = null;
+
+    if (points.length < 2) { this.render(); return; }
+
+    // 找起点最近的我方工厂
+    let nearestFactory = null, minF = Infinity;
+    for (const f of this.factories) {
+      if (f.owner !== this.currentPlayer) continue;
+      const d = distToPoint(points[0].x, points[0].y, f.x, f.y);
+      if (d < minF) { minF = d; nearestFactory = f; }
+    }
+    // 找终点最近的我方大炮
+    let nearestCannon = null, minC = Infinity;
+    for (const c of this.cannons) {
+      if (c.owner !== this.currentPlayer) continue;
+      const d = distToPoint(end.x, end.y, c.x, c.y);
+      if (d < minC) { minC = d; nearestCannon = c; }
+    }
+
+    if (!nearestFactory) { this.setActionText('引线起点附近没有我方工厂'); this.render(); return; }
+    if (!nearestCannon) { this.setActionText('引线终点附近没有我方大炮'); this.render(); return; }
+
+    this.wires.push({
+      id: this.wires.length,
+      owner: this.currentPlayer,
+      factoryId: nearestFactory.id,
+      cannonId: nearestCannon.id,
+      points: [ { x: nearestFactory.x, y: nearestFactory.y }, ...points, { x: nearestCannon.x, y: nearestCannon.y } ],
+      hp: 1
+    });
+
+    this.setActionText('引线已连接，大炮可以开火了！');
+    this.autoNextTurn();
+  }
+
+  tryMoveEmperor(pos) {
+    const player = this.players[this.currentPlayer];
+    if (player.emperorCityId === null) return;
+    const emperorCity = this.cities[player.emperorCityId];
+    // 找到点击的目标城池
+    let targetCity = null;
+    for (const city of this.cities) {
+      if (city.id === player.emperorCityId) continue;
+      if (city.owner !== this.currentPlayer) continue;
+      if (distToPoint(pos.x, pos.y, city.x, city.y) <= 35) { targetCity = city; break; }
+    }
+    if (!targetCity) { this.setActionText('请点击你占领的城池'); return; }
+    // BFS：通过兵线网络检查皇帝城到目标城是否连通
+    const visited = new Set([emperorCity.id]);
+    const queue = [emperorCity.id];
+    let reachable = false;
+    while (queue.length > 0) {
+      const curId = queue.shift();
+      if (curId === targetCity.id) { reachable = true; break; }
+      const curCity = this.cities[curId];
+      // 找所有触及当前城的我方兵线
+      for (const troop of this.troops) {
+        if (troop.owner !== this.currentPlayer) continue;
+        let touchesCur = false;
+        for (const p of troop.points) {
+          if (distToPoint(p.x, p.y, curCity.x, curCity.y) < 35) { touchesCur = true; break; }
+        }
+        if (!touchesCur) continue;
+        // 该兵线触及当前城 → 找到该兵线触及的所有我方城
+        for (const city of this.cities) {
+          if (city.owner !== this.currentPlayer) continue;
+          if (visited.has(city.id)) continue;
+          let touchesCity = false;
+          for (const p of troop.points) {
+            if (distToPoint(p.x, p.y, city.x, city.y) < 35) { touchesCity = true; break; }
+          }
+          if (touchesCity) {
+            visited.add(city.id);
+            queue.push(city.id);
+          }
+        }
+      }
+    }
+    if (reachable) {
+      emperorCity.hasEmperor = false; targetCity.hasEmperor = true;
+      player.emperorCityId = targetCity.id;
+      this.setActionText('皇帝已移动'); this.autoNextTurn(); return;
+    } else {
+      this.setActionText('需要有兵线连接的城池才能移动皇帝'); return;
+    }
+  }
+
+  tryBurnRope(pos) {
+    for (const mtn of this.mountains) {
+      if (mtn.hasRope && pointOnMountain(pos.x, pos.y, mtn)) {
+        mtn.hasRope = false; mtn.ropeOwner = null;
+        for (let i = this.troops.length - 1; i >= 0; i--) {
+          const troop = this.troops[i];
+          for (const p of troop.points) {
+            if (pointOnMountain(p.x, p.y, mtn)) {
+              let onEdge = false;
+              const pts = mtn.points;
+              for (let j = 0; j < pts.length - 1; j++) {
+                if (pointToLineDist(p.x, p.y, pts[j].x, pts[j].y, pts[j+1].x, pts[j+1].y) < 10) { onEdge = true; break; }
+              }
+              if (!onEdge) { this._destroyCavalryByTroop(troop); this.troops.splice(i, 1); break; }
+            }
+          }
+        }
+        this.setActionText('绳子已烧断'); this.autoNextTurn(); return;
+      }
+    }
+    this.setActionText('请点击有绳子的山体');
+  }
+
+  tryCannonAttack(pos) {
+    // 第一步：尝试选中自己的大炮
+    if (!this.selectedCannon) {
+      let found = null;
+      for (const c of this.cannons) {
+        if (c.owner === this.currentPlayer && distToPoint(pos.x, pos.y, c.x, c.y) < 20) {
+          found = c;
+        }
+      }
+      if (found) {
+        // 检查是否有连接的引线且血量>0
+        const hasWire = this.wires.some(w => w.cannonId === found.id && w.owner === this.currentPlayer && w.hp > 0);
+        if (!hasWire) {
+          this.setActionText('大炮未连接引线，无法开火！请先用"连引线"连接工厂');
+          this.render();
+          return;
+        }
+        this.selectedCannon = found;
+        this.setActionText('大炮已选中，点击目标开炮');
+        this.render();
+        return;
+      }
+      this.setActionText('请先点击你的大炮（红色虚线炮）'); return;
+    }
+    // 第二步：开炮
+    const cannon = this.selectedCannon;
+    const rangeDist = distToPoint(pos.x, pos.y, cannon.x, cannon.y);
+    if (rangeDist > CONFIG.CANNON_RANGE) {
+      this.setActionText(`目标超出射程（距离${Math.round(rangeDist)}，射程${CONFIG.CANNON_RANGE}）`);
+      this.selectedCannon = null; this.render(); return;
+    }
+    // 按优先级逐个检测目标
+    let hit = false;
+    // 1. 敌方大炮
+    for (let i = this.cannons.length - 1; i >= 0; i--) {
+      const c = this.cannons[i];
+      if (c.owner === this.currentPlayer) continue;
+      if (distToPoint(pos.x, pos.y, c.x, c.y) < 50) {
+        c.hp -= CONFIG.CANNON_ATK;
+        if (c.hp <= 0) { const cid = c.id; this.cannons.splice(i, 1); this.wires = this.wires.filter(w => w.cannonId !== cid); this.setActionText('敌方大炮被摧毁！'); }
+        else { this.setActionText(`命中敌方大炮！剩余血量: ${c.hp}`); }
+        hit = true; break;
+      }
+    }
+    if (hit) {
+      // 消耗引线血量
+      this._consumeWireHp(cannon.id);
+      this.selectedCannon = null; this.autoNextTurn(); return;
+    }
+    // 2. 敌方城池
+    for (const city of this.cities) {
+      if (city.owner !== this.currentPlayer && distToPoint(pos.x, pos.y, city.x, city.y) < 35) {
+        city.hp -= CONFIG.CANNON_ATK;
+        this.setActionText(`命中城池！剩余血量: ${city.hp}`);
+        if (city.hp <= 0) this.captureCity(city, this.currentPlayer);
+        hit = true; break;
+      }
+    }
+    if (hit) {
+      // 消耗引线血量
+      this._consumeWireHp(cannon.id);
+      this.selectedCannon = null; this.autoNextTurn(); return;
+    }
+    // 3. 敌方工厂
+    for (const f of this.factories) {
+      if (f.owner !== this.currentPlayer && distToPoint(pos.x, pos.y, f.x, f.y) < 25) {
+        f.hp -= CONFIG.CANNON_ATK;
+        this.setActionText(`命中工厂！剩余血量: ${f.hp}`);
+        if (f.hp <= 0) this.destroyFactory(f);
+        hit = true; break;
+      }
+    }
+    if (hit) {
+      // 消耗引线血量
+      this._consumeWireHp(cannon.id);
+      this.selectedCannon = null; this.autoNextTurn(); return;
+    }
+    // 4. 敌方兵线
+    for (let i = this.troops.length - 1; i >= 0; i--) {
+      const t = this.troops[i];
+      if (t.owner === this.currentPlayer) continue;
+      for (const p of t.points) {
+        if (distToPoint(pos.x, pos.y, p.x, p.y) < 15) {
+          t.hp -= CONFIG.CANNON_ATK;
+          this.setActionText(`命中兵线！剩余血量: ${t.hp}`);
+          if (t.hp <= 0) { this._destroyCavalryByTroop(t); this.troops.splice(i, 1); }
+          hit = true; break;
+        }
+      }
+      if (hit) break;
+    }
+    if (hit) {
+      // 消耗引线血量
+      this._consumeWireHp(cannon.id);
+      this.selectedCannon = null; this.autoNextTurn(); return;
+    }
+    // 5. 敌方粮线（修正：用点到线段距离）
+    for (let i = this.supplyLines.length - 1; i >= 0; i--) {
+      const sl = this.supplyLines[i];
+      if (sl.owner === this.currentPlayer) continue;
+      let nearSupply = false;
+      for (let j = 0; j < sl.points.length - 1; j++) {
+        if (pointToLineDist(pos.x, pos.y, sl.points[j].x, sl.points[j].y, sl.points[j+1].x, sl.points[j+1].y) < 25) { nearSupply = true; break; }
+      }
+      if (nearSupply) {
+        sl.hp -= 1;
+        if (sl.hp <= 0) { this.supplyLines.splice(i, 1); this.setActionText('粮线被切断！'); }
+        else { this.setActionText(`粮线受伤！剩余血量: ${sl.hp}`); }
+        hit = true; break;
+      }
+    }
+    if (hit) {
+      // 消耗引线血量
+      this._consumeWireHp(cannon.id);
+      this.selectedCannon = null; this.autoNextTurn(); return;
+    }
+    // 6. 敌方引线（点到线段距离 + 点到端点备用检测）
+    for (let i = this.wires.length - 1; i >= 0; i--) {
+      const w = this.wires[i];
+      if (w.owner === this.currentPlayer) continue;
+      let nearWire = false;
+      for (let j = 0; j < w.points.length - 1; j++) {
+        if (pointToLineDist(pos.x, pos.y, w.points[j].x, w.points[j].y, w.points[j+1].x, w.points[j+1].y) < 50) { nearWire = true; break; }
+      }
+      // 备用：检测是否靠近任意端点
+      if (!nearWire) {
+        for (const p of w.points) {
+          if (distToPoint(pos.x, pos.y, p.x, p.y) < 50) { nearWire = true; break; }
+        }
+      }
+      if (nearWire) {
+        w.hp -= 1;
+        if (w.hp <= 0) { this.wires.splice(i, 1); this.setActionText('敌方引线被切断！'); }
+        else { this.setActionText('敌方引线受伤！'); }
+        hit = true; break;
+      }
+    }
+    if (hit) {
+      // 消耗己方引线血量
+      this._consumeWireHp(cannon.id);
+      this.selectedCannon = null; this.autoNextTurn(); return;
+    }
+    this.setActionText('未命中任何目标，请再试');
+    this.selectedCannon = null; this.render();
+  }
+
+  destroyFactory(factory) {
+    const owner = factory.owner;
+    this.docks = this.docks.filter(d => d.owner !== owner || distToPoint(d.x, d.y, factory.x, factory.y) > 150);
+    this.ships = this.ships.filter(s => s.owner !== owner || !this.docks.some(d => d.id === s.dockId));
+    this.factories = this.factories.filter(f => f.id !== factory.id);
+  }
+
+  setMode(mode) {
+    this.mode = mode;
+    this.selectedCannon = null;
+    document.querySelectorAll('.btn').forEach(b => b.classList.remove('active'));
+    if (mode) {
+      const btnMap = {
+        troop: 'btnTroop', factory: 'btnFactory', rope: 'btnRope',
+        dock: 'btnDock', ship: 'btnShip', cannon: 'btnCannon',
+        wire: 'btnWire', supply: 'btnSupply', moveEmperor: 'btnMoveEmperor', burnRope: 'btnBurnRope',
+        cavalry: 'btnCavalry', attack: 'btnAttack', pan: 'btnPan'
+      };
+      const btn = document.getElementById(btnMap[mode]);
+      if (btn) btn.classList.add('active');
+      if (mode === 'pan') {
+        this.canvas.style.cursor = 'grab';
+        this.setActionText('左键拖动平移地图，滚轮缩放');
+        return;
+      }
+      this.canvas.style.cursor = 'crosshair';
+    }
+
+    // 根据是否为移动端显示不同提示
+    const touchHint = this.isMobile ? '长按' : '右键';
+    const clickHint = this.isMobile ? '点击' : '左键点击';
+
+    if (mode === 'troop') this.setActionText(`${touchHint}源头朝反方向拖拽出兵`);
+    else if (mode === 'factory') this.setActionText(`${clickHint}你的城池建造工厂`);
+    else if (mode === 'rope') this.setActionText(`${clickHint}山体修建绳子`);
+    else if (mode === 'dock') this.setActionText(`${clickHint}河流修建码头`);
+    else if (mode === 'ship') this.setActionText(`${clickHint}码头造船`);
+    else if (mode === 'cannon') this.setActionText(`${clickHint}任意位置建造大炮`);
+    else if (mode === 'wire') this.setActionText(`${touchHint}从工厂画引线到大炮`);
+    else if (mode === 'supply') this.setActionText(`${touchHint}画粮线（从城池到兵线）`);
+    else if (mode === 'moveEmperor') this.setActionText(`${clickHint}有兵线连接的城池移动皇帝`);
+    else if (mode === 'burnRope') this.setActionText(`${clickHint}有绳子的山体烧断`);
+    else if (mode === 'cavalry') this.setActionText(`${clickHint}工厂附近放置骑兵`);
+    else if (mode === 'attack') this.setActionText(`${clickHint}大炮然后${clickHint}目标开炮`);
+    else { this.canvas.style.cursor = 'crosshair'; this.setActionText('操作后自动进入下一回合'); }
+  }
+
+  setActionText(text) {
+    document.getElementById('actionText').textContent = text;
+    // 移动端：更新底部提示
+    if (this.isMobile) {
+      const touchHint = document.getElementById('touchHint');
+      if (this.mode === 'troop' || this.mode === 'supply' || this.mode === 'wire') {
+        touchHint.style.display = 'block';
+        touchHint.textContent = '长按拖拽';
+      } else if (this.mode === 'attack') {
+        touchHint.style.display = 'block';
+        touchHint.textContent = '点击大炮后点击目标';
+      } else {
+        touchHint.style.display = 'none';
+      }
+    }
+  }
+
+  // 自动结束回合，切换到下一个玩家
+  autoNextTurn() {
+    if (this.state !== 'playing') return;
+    // 联机模式：使用联机回合切换
+    if (this.gameMode === 'online') { this._onlineEndTurn(); return; }
+    this.troops = this.troops.filter(t => t.hp > 0);
+    this.combatEvents = [];
+    this.checkWinCondition();
+    if (this.state === 'gameover') return;
+    this.currentPlayer = (this.currentPlayer + 1) % CONFIG.PLAYERS;
+    if (this.currentPlayer === 0) this.turn++;
+    while (!this.players[this.currentPlayer].alive) {
+      this.currentPlayer = (this.currentPlayer + 1) % CONFIG.PLAYERS;
+      if (this.currentPlayer === 0) this.turn++;
+    }
+    this.setMode(null); this.updateUI(); this.render();
+    if (this.gameMode === 'ai' && !this.players[this.currentPlayer].isHuman) {
+      setTimeout(() => this.startAITurn(), 500);
+    } else {
+      this.aiThinking = false;
+      this.setButtonsEnabled(true);
+    }
+  }
+
+  endTurn() {
+    if (this.state !== 'playing') return;
+    // 联机模式：使用联机回合切换
+    if (this.gameMode === 'online') { this._onlineEndTurn(); return; }
+    // 如果AI正在执行，延迟结束回合
+    if (this.aiThinking) {
+      setTimeout(() => this.endTurn(), 200);
+      return;
+    }
+    this.troops = this.troops.filter(t => t.hp > 0);
+    this.combatEvents = [];
+    this.checkWinCondition();
+    if (this.state === 'gameover') return;
+    this.currentPlayer = (this.currentPlayer + 1) % CONFIG.PLAYERS;
+    if (this.currentPlayer === 0) this.turn++;
+    while (!this.players[this.currentPlayer].alive) {
+      this.currentPlayer = (this.currentPlayer + 1) % CONFIG.PLAYERS;
+      if (this.currentPlayer === 0) this.turn++;
+    }
+    this.setMode(null); this.updateUI(); this.render();
+    if (this.gameMode === 'ai' && !this.players[this.currentPlayer].isHuman) {
+      this.aiThinking = true; // 在触发startAITurn前就锁定
+      setTimeout(() => this.startAITurn(), 500);
+    } else {
+      this.aiThinking = false;
+      this.setButtonsEnabled(true);
+    }
+  }
+
+  checkWinCondition() {
+    const alivePlayers = this.players.filter(p => p.alive);
+    if (alivePlayers.length <= 1) {
+      this.state = 'gameover';
+      document.getElementById('btnQuit').style.display = 'none';
+      const winner = alivePlayers[0];
+      document.getElementById('gameOverOverlay').style.display = 'flex';
+      if (winner) {
+        document.getElementById('winnerText').textContent = `${winner.name} 获胜！`;
+        document.getElementById('winnerDesc').textContent = `玩家 ${winner.id + 1} 统一了世界！`;
+        document.getElementById('winnerText').style.color = winner.color;
+      } else {
+        document.getElementById('winnerText').textContent = '平局！';
+      }
+    }
+  }
+
+  confirmQuit() {
+    document.getElementById('quitConfirmOverlay').style.display = 'flex';
+  }
+  cancelQuit() {
+    document.getElementById('quitConfirmOverlay').style.display = 'none';
+  }
+  quitGame() {
+    document.getElementById('quitConfirmOverlay').style.display = 'none';
+    document.getElementById('btnQuit').style.display = 'none';
+    document.getElementById('gameOverOverlay').style.display = 'none';
+    document.getElementById('emperorPrompt').style.display = 'none';
+    document.getElementById('topBar').style.display = 'none';
+    document.getElementById('bottomBar').style.display = 'none';
+    document.getElementById('aiLog').style.display = 'none';
+    if (this.network) { this.network.disconnect(); this.network = null; }
+    this.state = 'menu';
+    this.gameMode = null; this._onlineGameStarted = false; this.aiThinking = false;
+    this.cities = []; this.mountains = []; this.rivers = [];
+    this.troops = []; this.factories = []; this.docks = []; this.ships = [];
+    this.cannons = []; this.cavalryUnits = []; this.supplyLines = []; this.wires = [];
+    this.combatEvents = []; this.players = [];
+    this.setMode(null); this.currentPlayer = 0; this.turn = 1;
+    this._emperorDragStart = null;
+    this.selectedCannon = null; this.selectedCity = null;
+    document.getElementById('playerSelectOverlay').style.display = 'flex';
+    document.getElementById('modeSelectScreen').style.display = 'block';
+    document.getElementById('localSetupScreen').style.display = 'none';
+    document.getElementById('aiSetupScreen').style.display = 'none';
+    document.getElementById('onlineLobbyScreen').style.display = 'none';
+    document.getElementById('currentPlayerText').textContent = '玩家 1 的回合';
+    document.getElementById('turnText').textContent = '第 1 轮';
+    document.getElementById('actionText').textContent = '请选择游戏模式开始游戏';
+    this.renderMenu();
+  }
+
+  updateUI() {
+    const player = this.players[this.currentPlayer];
+    document.getElementById('currentColorDot').style.background = player.color;
+    document.getElementById('currentPlayerText').textContent = `玩家 ${this.currentPlayer + 1} (${player.name}) 的回合`;
+    document.getElementById('turnText').textContent = `第 ${this.turn} 轮`;
+    document.getElementById('actionText').textContent = '请选择操作';
+  }
+
+  // ==================== 渲染 ====================
+  render() {
+    if (this._edit) { this._editRender(); return; }
+    const ctx = this.ctx;
+    ctx.save();
+    ctx.clearRect(0, 0, CONFIG.MAP_W, CONFIG.MAP_H);
+    ctx.fillStyle = '#FCF9F2';
+    ctx.fillRect(0, 0, CONFIG.MAP_W, CONFIG.MAP_H);
+
+    ctx.scale(this.camera.zoom, this.camera.zoom);
+    ctx.translate(-this.camera.x, -this.camera.y);
+
+    // 河流先画，不跟手绘抖动
+    for (const river of this.rivers) {
+      ctx.strokeStyle = '#3366AA'; ctx.lineWidth = river.width || 55;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      const pts = getRiverPoints(river, 0.04);
+      if (pts.length >= 2) {
+        ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+        ctx.stroke();
+      }
+    }
+
+    // 河流桥梁
+    for (const river of this.rivers) {
+      for (const br of (river.bridges || [])) {
+        let angle = 0;
+        if (river.points) {
+          const pts = river.points;
+          let bestD = Infinity;
+          for (let i = 0; i < pts.length - 1; i++) {
+            const pa = pts[i], pb = pts[i + 1];
+            const dx = pb.x - pa.x, dy = pb.y - pa.y, len = Math.hypot(dx, dy);
+            if (len < 2) continue;
+            const tt = Math.max(0, Math.min(1, ((br.x - pa.x) * dx + (br.y - pa.y) * dy) / (len * len)));
+            const px = pa.x + tt * dx, py = pa.y + tt * dy;
+            const d = Math.hypot(br.x - px, br.y - py);
+            if (d < bestD) { bestD = d; angle = Math.atan2(dy, dx) + Math.PI / 2; }
+          }
+        } else {
+          const dt = 0.01;
+          let t0 = Math.max(0, br.t - dt), t1 = Math.min(1, br.t + dt);
+          const a2 = bezierPoint(t0, river.p0, river.p1, river.p2, river.p3);
+          const b2 = bezierPoint(t1, river.p0, river.p1, river.p2, river.p3);
+          angle = Math.atan2(b2.y - a2.y, b2.x - a2.x) + Math.PI / 2;
+        }
+        ctx.save(); ctx.translate(br.x, br.y); ctx.rotate(angle);
+        ctx.fillStyle = '#D4A76A'; ctx.fillRect(-50, -18, 100, 36);
+        ctx.strokeStyle = '#4A3728'; ctx.lineWidth = 3;
+        sketchRect(ctx, -50, -18, 100, 36, 3);
+        ctx.strokeStyle = '#8B6914'; ctx.lineWidth = 1.5;
+        for (let lx = -40; lx <= 40; lx += 10) {
+          ctx.beginPath(); ctx.moveTo(jitter(lx,1.5), jitter(-18,1.5)); ctx.lineTo(jitter(lx,1.5), jitter(18,1.5)); ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    ctx.strokeStyle = 'rgba(0,0,0,0.03)'; ctx.lineWidth = 0.5;
+    for (let x = 0; x < CONFIG.MAP_W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, CONFIG.MAP_H); ctx.stroke(); }
+    for (let y = 0; y < CONFIG.MAP_H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(CONFIG.MAP_W, y); ctx.stroke(); }
+
+    for (const mtn of this.mountains) {
+      ctx.strokeStyle = '#4A3728'; ctx.lineWidth = 2.5; ctx.fillStyle = '#FCF9F2';
+      ctx.beginPath(); const pts = mtn.points;
+      ctx.moveTo(jitter(pts[0].x,2), jitter(pts[0].y,2));
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(jitter(pts[i].x,2), jitter(pts[i].y,2));
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = '#4A3728'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(jitter(mtn.x-10,1), jitter(mtn.y-mtn.h/2+5,1));
+      ctx.lineTo(jitter(mtn.x,1), jitter(mtn.y-mtn.h/2-5,1));
+      ctx.lineTo(jitter(mtn.x+10,1), jitter(mtn.y-mtn.h/2+5,1)); ctx.stroke();
+      if (mtn.hasRope) {
+        ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(mtn.x, mtn.y - mtn.h/2);
+        for (let i = 1; i <= 10; i++) {
+          const t = i / 10, zigzag = (i % 2 === 0 ? 8 : -8);
+          ctx.lineTo(mtn.x + zigzag, mtn.y - mtn.h/2 + t * mtn.h);
+        }
+        ctx.stroke();
+      }
+    }
+
+    ctx.setLineDash([5, 4]);
+    for (const sl of this.supplyLines) {
+      if (sl.points.length < 2) continue;
+      ctx.strokeStyle = CONFIG.COLORS[sl.owner]; ctx.lineWidth = 2.5; ctx.globalAlpha = 0.8;
+      ctx.beginPath(); ctx.moveTo(jitter(sl.points[0].x,1.5), jitter(sl.points[0].y,1.5));
+      for (let i = 1; i < sl.points.length; i++) ctx.lineTo(jitter(sl.points[i].x,1.5), jitter(sl.points[i].y,1.5));
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      const mid = sl.points[Math.floor(sl.points.length / 2)];
+      ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(mid.x + 6, mid.y - 10, 20, 14);
+      ctx.fillStyle = CONFIG.COLORS[sl.owner]; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText('粮'+sl.hp, mid.x + 8, mid.y + 2);
+    }
+    for (const w of this.wires) {
+      if (w.points.length < 2) continue;
+      this.drawSpringLine(ctx, w.points, CONFIG.COLORS[w.owner], 2, 8, 1.2);
+    }
+    ctx.setLineDash([]);
+
+    for (const f of this.factories) {
+      ctx.fillStyle = '#FCF9F2'; ctx.strokeStyle = CONFIG.COLORS[f.owner]; ctx.lineWidth = 2;
+      sketchRect(ctx, f.x-12, f.y-16, 24, 28, 1.5);
+      ctx.beginPath(); ctx.moveTo(jitter(f.x-14,1), jitter(f.y-16,1)); ctx.lineTo(jitter(f.x,1), jitter(f.y-24,1)); ctx.lineTo(jitter(f.x+14,1), jitter(f.y-16,1)); ctx.closePath(); ctx.stroke();
+      ctx.fillStyle = '#000'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText('工'+f.hp, f.x, f.y + 20);
+    }
+
+    for (const d of this.docks) {
+      const river = this.rivers.find(r => r.id === d.riverId);
+      let angle = 0;
+      if (river) {
+        const dt = 0.02;
+        const t = Math.max(0.05, Math.min(0.95, this._findNearestRiverT(d.x, d.y, river)));
+        angle = getRiverAngleAt(river, t);
+      }
+      ctx.strokeStyle = CONFIG.COLORS[d.owner]; ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(d.x - Math.cos(angle) * 16, d.y - Math.sin(angle) * 16);
+      ctx.lineTo(d.x + Math.cos(angle) * 16, d.y + Math.sin(angle) * 16);
+      ctx.stroke();
+    }
+
+    for (const s of this.ships) {
+      const dock = this.docks.find(d => d.id === s.dockId);
+      let angle = 0;
+      if (dock) {
+        const river = this.rivers.find(r => r.id === dock.riverId);
+        if (river) {
+          const t = Math.max(0.05, Math.min(0.95, this._findNearestRiverT(dock.x, dock.y, river)));
+          angle = getRiverAngleAt(river, t, Math.PI / 2);
+        }
+      }
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(angle);
+      ctx.strokeStyle = CONFIG.COLORS[s.owner]; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(-10, 0); ctx.quadraticCurveTo(0, -8, 10, 0); ctx.stroke();
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, -14); ctx.stroke();
+      ctx.restore();
+      // 出兵圆点
+      if (s.spawnX !== undefined) {
+        ctx.strokeStyle = CONFIG.COLORS[s.owner]; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(s.spawnX, s.spawnY, 6, 0, Math.PI*2); ctx.stroke();
+        // 检查是否有兵线
+        const hasTroop = this.troops.some(t => t.shipId === s.id && t.hp > 0);
+        if (!hasTroop) {
+          ctx.fillStyle = CONFIG.COLORS[s.owner]; ctx.globalAlpha = 0.5;
+          ctx.beginPath(); ctx.arc(s.spawnX, s.spawnY, 3, 0, Math.PI*2); ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    for (const c of this.cannons) {
+      ctx.strokeStyle = CONFIG.COLORS[c.owner]; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.25;
+      ctx.beginPath(); ctx.arc(c.x, c.y, CONFIG.CANNON_RANGE, 0, Math.PI*2); ctx.stroke(); ctx.globalAlpha = 1;
+      ctx.fillStyle = '#FCF9F2'; ctx.strokeStyle = CONFIG.COLORS[c.owner]; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(c.x, c.y, 10, 0, Math.PI*2); ctx.stroke();
+      ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(c.x, c.y); ctx.lineTo(c.x+18, c.y-6); ctx.stroke();
+      if (this.selectedCannon && this.selectedCannon === c) {
+        ctx.strokeStyle = '#f90'; ctx.lineWidth = 2; ctx.setLineDash([3,2]);
+        ctx.beginPath(); ctx.arc(c.x, c.y, 16, 0, Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
+      }
+    }
+
+    for (const cv of this.cavalryUnits) {
+      const color = CONFIG.COLORS[cv.owner];
+      this.drawCavalryHorse(ctx, cv.x, cv.y, color, 0.8);
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(cv.spawnX, cv.spawnY, 6, 0, Math.PI*2); ctx.stroke();
+      ctx.fillStyle = '#000'; ctx.font = 'bold 8px sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(cv.hp, cv.x, cv.y - 14);
+    }
+
+    for (const troop of this.troops) {
+      if (troop.points.length < 2) continue;
+      const color = CONFIG.COLORS[troop.owner];
+      ctx.strokeStyle = color; ctx.lineWidth = troop.type === 'cavalry' ? 2 : 1.5;
+      ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      ctx.beginPath(); ctx.moveTo(troop.points[0].x, troop.points[0].y);
+      for (let i = 1; i < troop.points.length; i++) ctx.lineTo(troop.points[i].x, troop.points[i].y);
+      ctx.stroke();
+      ctx.globalAlpha = 0.3;
+      ctx.beginPath(); ctx.moveTo(troop.points[0].x, troop.points[0].y);
+      for (let i = 1; i < troop.points.length; i++) ctx.lineTo(troop.points[i].x, troop.points[i].y);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      if (troop.type === 'cavalry') {
+        this.drawCavalryHorse(ctx, troop.points[0].x, troop.points[0].y, color, 0.7);
+      }
+      const endPoint = troop.points[troop.points.length - 1];
+      ctx.fillStyle = '#000'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'left';
+      ctx.fillText('\u2665'+troop.hp+' \u2694'+troop.atk, endPoint.x + 10, endPoint.y + 2);
+    }
+
+    if (this.combatEvents) {
+      for (const event of this.combatEvents) {
+        const { x, y } = event.point;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.beginPath(); ctx.arc(x, y, 18, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#ff0000'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x - 8, y - 8); ctx.lineTo(x + 8, y + 8); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x + 8, y - 8); ctx.lineTo(x - 8, y + 8); ctx.stroke();
+      }
+    }
+
+    ctx.textAlign = 'center';
+
+    if (this.dragStart && this.dragCurrent) {
+      if ((this.mode === 'supply' || this.mode === 'wire') && this.supplyDragPoints) {
+        // 续粮/引线模式：画自由轨迹预览
+        if (this.supplyDragPoints.length > 1) {
+          ctx.strokeStyle = CONFIG.COLORS[this.currentPlayer]; ctx.lineWidth = 3;
+          ctx.globalAlpha = 0.8; ctx.setLineDash([6, 3]);
+          ctx.beginPath();
+          ctx.moveTo(this.supplyDragPoints[0].x, this.supplyDragPoints[0].y);
+          for (let i = 1; i < this.supplyDragPoints.length; i++) {
+            ctx.lineTo(this.supplyDragPoints[i].x, this.supplyDragPoints[i].y);
+          }
+          ctx.lineTo(this.dragCurrent.x, this.dragCurrent.y);
+          ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+        }
+      } else {
+        // 拉弓式出兵：只画拖拽线，射击方向隐含在反向中
+        const sx = this.dragStart.x, sy = this.dragStart.y;
+        const ex = this.dragCurrent.x, ey = this.dragCurrent.y;
+        const len = Math.min(Math.hypot(ex - sx, ey - sy), 250);
+        if (len > 15) {
+          ctx.strokeStyle = CONFIG.COLORS[this.currentPlayer]; ctx.lineWidth = 2; ctx.globalAlpha = 0.4;
+          ctx.setLineDash([4, 6]);
+          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha = 1;
+        } else {
+          ctx.strokeStyle = CONFIG.COLORS[this.currentPlayer]; ctx.lineWidth = 3; ctx.setLineDash([5, 5]);
+          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+        }
+      }
+    }
+
+    for (const city of this.cities) this.drawCity(ctx, city);
+
+    // AI 操作高亮指示器（仅AI模式）
+    if (this.gameMode === 'ai' && this.aiHighlightTarget) {
+      const t = this.aiHighlightTarget;
+      const pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
+      ctx.strokeStyle = t.color || '#ff0';
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = 0.3 + pulse * 0.7;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, t.r || 20, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.globalAlpha = 1;
+    }
+
+    if (this.selectedCity) {
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.arc(this.selectedCity.x, this.selectedCity.y, 35, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
+
+    // 地图边界线（只在游戏中显示）
+    if (this.state !== 'menu') {
+      const zz = this.camera.zoom;
+      const alpha = 0.25 + 0.35 * Math.max(0, 1 - zz);
+      const bw = Math.max(1.5, 5 / zz);
+      ctx.globalAlpha = alpha;
+      ctx.setLineDash([18, 6]);
+      ctx.strokeStyle = '#cc3333'; ctx.lineWidth = bw + 3;
+      ctx.strokeRect(2, 2, CONFIG.MAP_W - 4, CONFIG.MAP_H - 4);
+      ctx.setLineDash([]);
+      ctx.strokeStyle = '#ff3333'; ctx.lineWidth = bw;
+      ctx.strokeRect(0, 0, CONFIG.MAP_W, CONFIG.MAP_H);
+      ctx.globalAlpha = 1;
+    }
+
+    ctx.restore();
+  }
+
+  // 找点离河流曲线最近处的t参数
+  _findNearestRiverT(x, y, river) {
+    if (river.points) {
+      // 自定义地图：在点列表上找最近点
+      let bestT = 0, bestDist = Infinity;
+      const pts = river.points;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const a = pts[i], b2 = pts[i + 1];
+        const dx = b2.x - a.x, dy = b2.y - a.y, len = Math.hypot(dx, dy);
+        if (len < 2) continue;
+        const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / (len * len)));
+        const px = a.x + t * dx, py = a.y + t * dy;
+        const d = Math.hypot(x - px, y - py);
+        if (d < bestDist) { bestDist = d; bestT = (i + t) / (pts.length - 1); }
+      }
+      return Math.max(0.05, Math.min(0.95, bestT));
+    }
+    let bestT = 0.5, bestDist = Infinity;
+    for (let t = 0; t <= 1; t += 0.01) {
+      const p = bezierPoint(t, river.p0, river.p1, river.p2, river.p3);
+      const d = Math.hypot(x - p.x, y - p.y);
+      if (d < bestDist) { bestDist = d; bestT = t; }
+    }
+    return bestT;
+  }
+
+  renderMenu() {
+    if (!this._menuMapGenerated && this.state === 'menu') {
+      this._menuMapGenerated = true;
+      this.generateMap();
+      this.state = 'menu';
+      this.render();
+    }
+  }
+
+  drawCity(ctx, city) {
+    const x = city.x, y = city.y;
+    const color = city.owner !== null ? CONFIG.COLORS[city.owner] : '#888';
+    const isEnemy = city.owner !== null && city.owner !== this.currentPlayer;
+    ctx.fillStyle = '#FCF9F2';
+    ctx.strokeStyle = isEnemy ? color : (city.owner !== null ? '#333' : '#999'); ctx.lineWidth = 2.5;
+    const w = 32, h = 20;
+    sketchRect(ctx, x-w/2, y-h/2, w, h, 2);
+    ctx.fillRect(x-w/2+1, y-h/2+1, w-2, h-2);
+    for (let i = 0; i < 3; i++) {
+      const bx = x - w/2 + 4 + i * (w-8)/2;
+      ctx.beginPath();
+      ctx.moveTo(jitter(bx-3,1.5), jitter(y-h/2,1.5));
+      ctx.lineTo(jitter(bx-3,1.5), jitter(y-h/2-7,1.5));
+      ctx.lineTo(jitter(bx+3,1.5), jitter(y-h/2-7,1.5));
+      ctx.lineTo(jitter(bx+3,1.5), jitter(y-h/2,1.5));
+      ctx.stroke(); ctx.fill();
+    }
+    ctx.fillStyle = '#FCF9F2';
+    ctx.strokeStyle = city.owner !== null ? color : '#999';
+    ctx.beginPath(); ctx.arc(x, jitter(y+h/2-3,1), 5, Math.PI, 0); ctx.stroke();
+    if (city.owner !== null) {
+      ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(jitter(x,1), jitter(y-h/2-7,1)); ctx.lineTo(jitter(x,1), jitter(y-h/2-18,1)); ctx.stroke();
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.moveTo(jitter(x,1), jitter(y-h/2-18,1)); ctx.lineTo(jitter(x+10,1.5), jitter(y-h/2-14,1.5)); ctx.lineTo(jitter(x,1), jitter(y-h/2-10,1.5)); ctx.closePath(); ctx.fill();
+    }
+    if (city.hasEmperor) {
+      ctx.fillStyle = color; ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(jitter(x-5,1), jitter(y+2,1)); ctx.lineTo(jitter(x+5,1), jitter(y+2,1)); ctx.lineTo(jitter(x,1), jitter(y-7,1)); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.fillStyle = '#000'; ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+    if (city.owner !== null) ctx.fillText(city.hp, x, y - h/2 - 20);
+    else ctx.fillText('空', x, y + h/2 + 12);
+  }
+
+  // =================== AI 回合方法 ===================
+
+  aiAutoSetup() {
+    const emptyCities = this.cities.filter(c => c.owner === null);
+    if (emptyCities.length === 0) return;
+    const cx = CONFIG.MAP_W / 2, cy = CONFIG.MAP_H / 2;
+    emptyCities.sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy));
+    const chosen = emptyCities[0];
+    this.handleSetupClick({ x: chosen.x, y: chosen.y });
+  }
+
+  setButtonsEnabled(enabled) {
+    document.querySelectorAll('#bottomBar .btn').forEach(b => {
+      b.disabled = !enabled;
+      b.style.opacity = enabled ? '' : '0.4';
+    });
+  }
+
+  aiLog(type, msg) {
+    if (this.gameMode !== 'ai') return;
+    const now = new Date();
+    const ts = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0') + ':' + now.getSeconds().toString().padStart(2,'0');
+    this.aiLogEntries.push({ type, msg, ts });
+    if (this.aiLogEntries.length > 100) this.aiLogEntries.shift();
+    const body = document.getElementById('aiLogBody');
+    if (!body) return;
+    const cls = type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : type === 'warn' ? 'log-warn' : 'log-info';
+    body.innerHTML += `<div class="log-entry"><span class="log-time">${ts}</span> <span class="${cls}">${msg}</span></div>`;
+    body.scrollTop = body.scrollHeight;
+  }
+
+  toggleAILog() {
+    const body = document.getElementById('aiLogBody');
+    const toggle = document.getElementById('aiLogToggle');
+    if (body.style.display === 'none') {
+      body.style.display = 'block';
+      toggle.textContent = '\u25BC';
+    } else {
+      body.style.display = 'none';
+      toggle.textContent = '\u25B6';
+    }
+  }
+
+  async startAITurn() {
+    if (this.state !== 'playing') return;
+    const p = this.players[this.currentPlayer];
+    if (p.isHuman) return;
+    if (!this.aiPlayer) return;
+
+    this.aiThinking = true;
+    this.setButtonsEnabled(false);
+    this.showAIOverlay(true);
+    this.aiLog('info', p.name + ' 回合开始...');
+
+    const MAX_RETRIES = 3;
+    let actions = null;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        actions = await this.aiPlayer.getActions();
+        if (actions && actions.length > 0) break;
+        this.aiLog('warn', '第' + attempt + '次返回空，尝试重试...');
+      } catch (err) {
+        console.error('AI turn error:', err);
+        this.aiLog('err', '第' + attempt + '次失败: ' + err.message + (attempt < MAX_RETRIES ? '，重试中...' : ''));
+        if (attempt < MAX_RETRIES) await new Promise(r => setTimeout(r, 1500));
+      }
+    }
+
+    if (!actions || actions.length === 0) {
+      this.aiLog('err', '连续' + MAX_RETRIES + '次失败，尝试盲出兵');
+      // 盲出兵：从己方城池随机向地图中心出兵
+      const myCities = this.cities.filter(c => c.owner === this.currentPlayer && c.hp > 0);
+      if (myCities.length > 0) {
+        const src = myCities[Math.floor(Math.random() * myCities.length)];
+        const cx = CONFIG.MAP_W / 2 + (Math.random() - 0.5) * 400;
+        const cy = CONFIG.MAP_H / 2 + (Math.random() - 0.5) * 300;
+        // 拉弓式：dragCurrent 放在目标反方向
+        const _blindAngle = Math.atan2(cy - src.y, cx - src.x);
+        const _blindPull = _blindAngle + Math.PI;
+        const _blindDist = Math.min(Math.hypot(cy - src.y, cx - src.x), 250);
+        this.dragStart = { x: src.x, y: src.y, origin: src, originType: 'city', originTroopId: null, isTroopEnd: false };
+        this.dragCurrent = { x: src.x + Math.cos(_blindPull) * _blindDist, y: src.y + Math.sin(_blindPull) * _blindDist };
+        const ok = this.finishTroopDeploy();
+        if (ok) {
+          this.aiLog('ok', '盲出兵成功');
+          this.aiThinking = false;
+          this.setButtonsEnabled(true);
+          return;
+        }
+      }
+      this.aiThinking = false;
+      this.setButtonsEnabled(true);
+      this.endTurn();
+      return;
+    }
+
+    this.aiActions = actions;
+    this.aiActionIndex = 0;
+    this.showAIOverlay(false);
+    if (actions[0].action) {
+      const a = actions[0];
+      this.aiLog('ok', '决策: ' + a.action + ' ' + JSON.stringify(a.params).substring(0, 80));
+      this.setActionText(p.name + ' (AI) 执行操作...');
+      this.animateAIAction();
+      return;
+    } else {
+      this.aiLog('warn', 'AI选择结束回合');
+    }
+    this.aiThinking = false;
+    this.setButtonsEnabled(true);
+    this.endTurn();
+  }
+
+  showAIOverlay(show) {
+    const el = document.getElementById('aiThinkingOverlay');
+    if (el) el.style.display = show ? 'flex' : 'none';
+    if (show) {
+      const tt = document.getElementById('aiThinkingText');
+      const ts = document.getElementById('aiThinkingSub');
+      if (tt) tt.textContent = 'AI 思考中...';
+      if (ts) ts.textContent = '正在问大佬（API）';
+    }
+  }
+
+  animateAIAction() {
+    if (this.aiActionIndex >= this.aiActions.length) {
+      // 所有 action 执行完 → endTurn
+      this.aiThinking = false;
+      this.setButtonsEnabled(true);
+      this.setActionText(this.players[this.currentPlayer].name + ' (AI) 回合结束');
+      this.aiHighlightTarget = null;
+      this.render();
+      setTimeout(() => this.endTurn(), 800);
+      return;
+    }
+    const action = this.aiActions[this.aiActionIndex];
+    const p = this.players[this.currentPlayer];
+    const actionNames = {
+      deploy_troop: '出兵', build_factory: '建造工厂', build_rope: '修绳子',
+      build_dock: '修码头', build_ship: '造船', build_cannon: '造大炮',
+      connect_wire: '连接引线', connect_supply: '补粮线',
+      move_emperor: '移动皇帝', burn_rope: '烧绳子',
+      place_cavalry: '部署骑兵', cannon_attack: '开炮'
+    };
+    const label = actionNames[action.action] || action.action;
+    this.setActionText(p.name + ' (AI): ' + label + ' (步骤' + (this.aiActionIndex + 1) + '/' + this.aiActions.length + ')');
+    const tt = document.getElementById('aiThinkingText');
+    const ts = document.getElementById('aiThinkingSub');
+    if (tt) tt.textContent = p.name + ' (AI)';
+    if (ts) ts.textContent = '执行' + label + '...';
+    this.showAIOverlay(true);
+
+    this.aiHighlightTarget = this.getAIHighlight(action);
+    this.render();
+
+    setTimeout(() => {
+      this.showAIOverlay(false);
+      const ok = this.executeAIAction(action);
+      if (!ok) {
+        this.aiLog('warn', action.action + '失败');
+        // 失败时重试：重新获取AI决策（最多重试2次）
+        this.aiActionRetry = (this.aiActionRetry || 0) + 1;
+        if (this.aiActionRetry <= 2) {
+          this.aiLog('info', 'AI重新决策（重试' + this.aiActionRetry + '/2）...');
+          this.aiActionIndex = 0;
+          this.aiActions = [];
+          setTimeout(() => this.startAITurn(), 400);
+          return;
+        }
+        this.aiLog('err', 'AI多次尝试失败，结束回合');
+      }
+      // 检查是否出兵成功结束了回合
+      if (this._aiTurnEnded) {
+        this._aiTurnEnded = false;
+        this.aiThinking = false;
+        this.setButtonsEnabled(true);
+        this.setActionText(p.name + ' (AI) 回合结束');
+        this.aiHighlightTarget = null;
+        this.render();
+        setTimeout(() => this.endTurn(), 600);
+        return;
+      }
+      this.aiActionRetry = 0;
+      this.aiActionIndex++;
+      this.aiHighlightTarget = null;
+      this.render();
+      if (this.aiActionIndex < this.aiActions.length) {
+        setTimeout(() => this.animateAIAction(), 600);
+      } else {
+        this.aiThinking = false;
+        this.setButtonsEnabled(true);
+        this.setActionText(p.name + ' (AI) 回合结束');
+        this.render();
+        setTimeout(() => this.endTurn(), 600);
+      }
+    }, 1000);
+  }
+
+  getAIHighlight(action) {
+    const p = action.params || {};
+    switch (action.action) {
+      case 'deploy_troop': return p.toX ? { x: p.toX, y: p.toY, r: 15, color: '#ff0' } : null;
+      case 'build_factory': {
+        const c = this.cities[p.cityId]; return c ? { x: c.x, y: c.y, r: 30, color: '#ff0' } : null;
+      }
+      case 'build_cannon': return { x: p.x, y: p.y, r: 12, color: '#f00' };
+      case 'place_cavalry': return { x: p.x, y: p.y, r: 12, color: '#0f0' };
+      case 'cannon_attack': return { x: p.targetX, y: p.targetY, r: 18, color: '#f00' };
+      default: return null;
+    }
+  }
+
+  executeAIAction(action) {
+    const p = action.params || {};
+    const me = this.currentPlayer;
+    let endedTurn = false;
+    let actionOk = true;
+    this._aiTurnEnded = false;
+    try {
+      switch (action.action) {
+        case 'deploy_troop': {
+          // 安全检查：确保 currentPlayer 仍是当前 AI
+          if (this.players[this.currentPlayer].isHuman) {
+            this.aiLog('err', '当前是人类玩家回合，跳过AI出兵');
+            actionOk = false;
+            break;
+          }
+          let src = this.findDeploySource(me, p.fromX, p.fromY);
+          if (!src) {
+            src = this.findNearestDeploySource(me, p.fromX, p.fromY);
+            if (src) this.aiLog('warn', '坐标不准，用最近出兵源 (' + Math.round(src.x) + ',' + Math.round(src.y) + ')');
+          }
+          if (src) {
+            // 二次安全检查：确认出兵源属于当前AI
+            if (src.origin && src.origin.owner !== undefined && src.origin.owner !== me) {
+              this.aiLog('err', '出兵源不属于当前AI（owner=' + src.origin.owner + '，me=' + me + '），跳过');
+              actionOk = false;
+              break;
+            }
+            // 先试AI想要的方向（拉弓式：dragCurrent 放在源头反方向）
+            const _aiAngle = Math.atan2(p.toY - src.y, p.toX - src.x);
+            const _aiPull = _aiAngle + Math.PI;
+            const _aiDist = Math.min(Math.hypot(p.toY - src.y, p.toX - src.x), 250);
+            this.dragStart = src; this.dragCurrent = { x: src.x + Math.cos(_aiPull) * _aiDist, y: src.y + Math.sin(_aiPull) * _aiDist };
+            let ok = this.finishTroopDeploy();
+            if (ok) {
+              endedTurn = true;
+              this.aiLog('ok', '出兵成功 -> (' + Math.round(p.toX) + ',' + Math.round(p.toY) + ')');
+            } else {
+              // 被阻挡？绕圈尝试8个方向
+              const dist = Math.hypot(p.toX - src.x, p.toY - src.y);
+              const baseAngle = Math.atan2(p.toY - src.y, p.toX - src.x);
+              let found = false;
+              for (let k = 0; k < 8 && !found; k++) {
+                const offset = ((k + 1) % 2 === 0 ? 1 : -1) * Math.floor((k + 1) / 2) * 0.6;
+                const a = _aiAngle + offset;
+                const tx = src.x + Math.cos(a) * Math.min(dist, 200);
+                const ty = src.y + Math.sin(a) * Math.min(dist, 200);
+                // 拉弓式：dragCurrent 放在反方向
+                const _retryPull = Math.atan2(ty - src.y, tx - src.x) + Math.PI;
+                const _retryDist = Math.hypot(ty - src.y, tx - src.x);
+                this.dragStart = src; this.dragCurrent = { x: src.x + Math.cos(_retryPull) * _retryDist, y: src.y + Math.sin(_retryPull) * _retryDist };
+                ok = this.finishTroopDeploy();
+                if (ok) {
+                  endedTurn = true; found = true;
+                  this.aiLog('ok', '绕路出兵成功 -> (' + Math.round(tx) + ',' + Math.round(ty) + ')');
+                }
+              }
+              if (!found) {
+                actionOk = false;
+                this.aiLog('err', '出兵失败（8方向均被阻挡）');
+              }
+            }
+          } else {
+            actionOk = false;
+            this.aiLog('err', '找不到出兵源（可能被消灭）');
+          }
+          break;
+        }
+        case 'build_factory': {
+          const fc = this.cities[p.cityId];
+          if (fc && fc.owner === me) { this.buildFactoryAt(fc.x, fc.y); this.aiLog('ok', '建造工厂 城' + p.cityId); }
+          else { actionOk = false; this.aiLog('err', '建造工厂失败: 城' + p.cityId + '不是己方'); }
+          break;
+        }
+        case 'build_cannon': {
+          this.buildCannonAt(p.x, p.y, me);
+          this.aiLog('ok', '造大炮 (' + Math.round(p.x) + ',' + Math.round(p.y) + ')');
+          break;
+        }
+        case 'place_cavalry': {
+          this.buildCavalryAt(p.x, p.y, me);
+          this.aiLog('ok', '部署骑兵 (' + Math.round(p.x) + ',' + Math.round(p.y) + ')');
+          break;
+        }
+        case 'connect_wire': {
+          const fac = this.factories[p.factoryId];
+          const can = this.cannons[p.cannonId];
+          if (fac && can && fac.owner === me) { this.buildWireBetween(fac, can); this.aiLog('ok', '连接引线 工厂' + p.factoryId + '->大炮' + p.cannonId); }
+          else { actionOk = false; this.aiLog('err', '连接引线失败'); }
+          break;
+        }
+        case 'end_turn': endedTurn = true; break;
+      }
+    } catch (e) { console.error('executeAIAction error:', e); actionOk = false; }
+    if (endedTurn) this._aiTurnEnded = true;
+    return actionOk;
+  }
+
+  findDeploySource(playerId, x, y) {
+    // 城池
+    for (const c of this.cities) {
+      if (c.owner === playerId && Math.hypot(c.x - x, c.y - y) < 35) {
+        return { x: c.x, y: c.y, origin: c, originType: 'city', originTroopId: null, isTroopEnd: false };
+      }
+    }
+    // 工厂
+    for (const f of this.factories) {
+      if (f.owner === playerId && Math.hypot(f.x - x, f.y - y) < 30) {
+        return { x: f.x, y: f.y, origin: f, originType: 'factory', originTroopId: null, isTroopEnd: false };
+      }
+    }
+    // 船
+    for (const s of this.ships) {
+      const sx = s.spawnX || s.x, sy = s.spawnY || s.y;
+      if (s.owner === playerId && Math.hypot(sx - x, sy - y) < 25) {
+        const hasTroop = this.troops.some(t => t.shipId === s.id && t.owner === playerId);
+        if (hasTroop) continue;
+        return { x: sx, y: sy, origin: { x: sx, y: sy, id: s.id }, originType: 'ship', originTroopId: null, isTroopEnd: false };
+      }
+    }
+    // 骑兵
+    for (const cv of this.cavalryUnits) {
+      if (cv.owner === playerId && !cv.hasTroop && Math.hypot(cv.spawnX - x, cv.spawnY - y) < 20) {
+        return { x: cv.spawnX, y: cv.spawnY, origin: { x: cv.spawnX, y: cv.spawnY, id: cv.id }, originType: 'cavalryUnit', originTroopId: null, isTroopEnd: false };
+      }
+    }
+    // 兵线（延伸/分支）
+    for (const t of this.troops) {
+      if (t.owner !== playerId || t.hp <= 0) continue;
+      for (let i = 0; i < t.points.length; i++) {
+        if (Math.hypot(t.points[i].x - x, t.points[i].y - y) < 15) {
+          return { x: t.points[i].x, y: t.points[i].y, origin: { x: t.points[i].x, y: t.points[i].y }, originType: 'troop', originTroopId: t.id, isTroopEnd: (i === t.points.length - 1) };
+        }
+      }
+    }
+    return null;
+  }
+
+  findNearestDeploySource(playerId, x, y) {
+    let best = null, bestDist = Infinity;
+    // 城池
+    for (const c of this.cities) {
+      if (c.owner === playerId) {
+        const d = Math.hypot(c.x - x, c.y - y);
+        if (d < bestDist) { bestDist = d; best = { x: c.x, y: c.y, origin: c, originType: 'city', originTroopId: null, isTroopEnd: false }; }
+      }
+    }
+    // 工厂
+    for (const f of this.factories) {
+      if (f.owner === playerId) {
+        const d = Math.hypot(f.x - x, f.y - y);
+        if (d < bestDist) { bestDist = d; best = { x: f.x, y: f.y, origin: f, originType: 'factory', originTroopId: null, isTroopEnd: false }; }
+      }
+    }
+    // 骑兵
+    for (const cv of this.cavalryUnits) {
+      if (cv.owner === playerId && !cv.hasTroop) {
+        const d = Math.hypot(cv.spawnX - x, cv.spawnY - y);
+        if (d < bestDist) { bestDist = d; best = { x: cv.spawnX, y: cv.spawnY, origin: { x: cv.spawnX, y: cv.spawnY, id: cv.id }, originType: 'cavalryUnit', originTroopId: null, isTroopEnd: false }; }
+      }
+    }
+    // 船
+    for (const s of this.ships) {
+      if (s.owner === playerId) {
+        const hasTroop = this.troops.some(t => t.shipId === s.id && t.owner === playerId);
+        if (hasTroop) continue;
+        const sx = s.spawnX || s.x, sy = s.spawnY || s.y;
+        const d = Math.hypot(sx - x, sy - y);
+        if (d < bestDist) { bestDist = d; best = { x: sx, y: sy, origin: { x: sx, y: sy, id: s.id }, originType: 'ship', originTroopId: null, isTroopEnd: false }; }
+      }
+    }
+    // 兵线
+    for (const t of this.troops) {
+      if (t.owner !== playerId || t.hp <= 0) continue;
+      for (let i = 0; i < t.points.length; i++) {
+        const d = Math.hypot(t.points[i].x - x, t.points[i].y - y);
+        if (d < bestDist) { bestDist = d; best = { x: t.points[i].x, y: t.points[i].y, origin: { x: t.points[i].x, y: t.points[i].y }, originType: 'troop', originTroopId: t.id, isTroopEnd: (i === t.points.length - 1) }; }
+      }
+    }
+    return best;
+  }
+
+  buildFactoryAt(x, y) {
+    const player = this.players[this.currentPlayer];
+    // 找最近的己方城池关联cityId
+    let nearestCity = null, nearestDist = Infinity;
+    for (const c of this.cities) {
+      if (c.owner === this.currentPlayer) {
+        const d = Math.hypot(c.x - x, c.y - y);
+        if (d < nearestDist) { nearestDist = d; nearestCity = c; }
+      }
+    }
+    const cityId = nearestCity ? nearestCity.id : null;
+    const id = this.factories.length;
+    this.factories.push({ id, cityId, x: x, y: y - 5, owner: this.currentPlayer, hp: CONFIG.FACTORY_HP });
+    player.factories.push(id);
+    this.factoryId = id + 1;
+    this.setActionText('工厂建造完成');
+  }
+
+  buildCannonAt(x, y, owner) {
+    const id = this.cannons.length;
+    this.cannons.push({ id, owner, x, y, hp: CONFIG.CANNON_HP });
+    this.cannonId = id + 1;
+    this.setActionText('大炮建造完成');
+  }
+
+  buildCavalryAt(x, y, owner) {
+    const id = this.cavalryUnits.length;
+    this.cavalryUnits.push({ id, owner, x, y, spawnX: x, spawnY: y + 16, hp: CONFIG.CAVALRY_UNIT_HP });
+    this.cavalryId = id + 1;
+    this.setActionText('骑兵部署完成');
+  }
+
+  buildWireBetween(fac, can) {
+    const id = this.wires.length;
+    this.wires.push({ id, factoryId: fac.id, cannonId: can.id, owner: fac.owner, points: [{ x: fac.x, y: fac.y }, { x: can.x, y: can.y }], hp: CONFIG.WIRE_HP });
+    this.wireId = id + 1;
+    this.setActionText('引线连接完成');
+  }
+
+  // 消耗指定大炮的引线血量（大炮攻击一次，引线掉1血）
+  _consumeWireHp(cannonId) {
+    for (let i = this.wires.length - 1; i >= 0; i--) {
+      const w = this.wires[i];
+      if (w.cannonId === cannonId && w.owner === this.currentPlayer) {
+        w.hp -= 1;
+        if (w.hp <= 0) {
+          this.wires.splice(i, 1);
+          this.setActionText(this.actionText + ' 引线已断！');
+        } else {
+          this.setActionText(this.actionText + ` 引线剩余血量: ${w.hp}`);
+        }
+        break;
+      }
+    }
+  }
+}
+
+// ==================== AI 对战系统 ====================
+
+const SYSTEM_PROMPT = '你是纸上江山游戏的AI玩家。你可以每回合执行多个操作（2-5个），先攻击后建设。\n\n' +
+'## 核心规则\n' +
+'- 每个己方城池最多同时存在3条兵线\n' +
+'- 地图有河流（蓝色），兵线不能穿过河流，必须走桥过河\n' +
+'- 4个玩家混战，皇帝城被攻占=该国灭亡\n\n' +
+'## 战力数据\n' +
+'- 普通兵线：HP=2 ATK=1\n' +
+'- 骑兵兵线：HP=2 ATK=3（攻城利器！从骑兵单位出兵）\n' +
+'- 大炮：HP=1 ATK=3 射程70（需引线连接工厂）\n' +
+'- 骑兵单位：HP=3（部署在工厂旁）\n\n' +
+'## 每回合必须做的事（按顺序，允许多个action）\n\n' +
+'1. **出兵攻击**：从己方兵线<3的城池出兵！优先攻击敌方皇帝城和HP低的城\n' +
+'2. **建工厂**：如果己方城池没有工厂→立即建工厂(build_factory)\n' +
+'3. **造骑兵**：有工厂没骑兵→部署骑兵(place_cavalry)，然后从骑兵出兵攻\n' +
+'4. **造大炮**：有工厂且敌人兵线逼近→造大炮(build_cannon)并连引线(connect_wire)，开炮(cannon_attack)\n' +
+'5. **多方向进攻**：从不同城池出兵，让敌人无法防守\n\n' +
+'## 可用指令\n\n' +
+'{"action":"deploy_troop","params":{"fromX":100,"fromY":200,"toX":300,"toY":250}} 出兵\n' +
+'{"action":"build_factory","params":{"cityId":3}} 在指定城池建工厂\n' +
+'{"action":"place_cavalry","params":{"x":410,"y":310}} 在工厂旁部署骑兵\n' +
+'{"action":"build_cannon","params":{"x":400,"y":300}} 在工厂旁造大炮\n' +
+'{"action":"connect_wire","params":{"factoryId":0,"cannonId":0}} 工厂连大炮\n' +
+'{"action":"cannon_attack","params":{"targetX":300,"targetY":250}} 大炮开火\n\n' +
+'## 返回格式\n' +
+'{"thinking":"1-2句分析","actions":[{"action":"deploy_troop","params":{...}},{"action":"build_factory","params":{...}}]}\n' +
+'- actions数组放2-5个action！先出兵再建设！\n' +
+'- 坐标用整数，严格JSON格式';
+
+class AIPlayer {
+  constructor(game) {
+    this.game = game;
+    this.apiUrl = 'https://open.bigmodel.cn/api/paas/v4/chat/completions';
+    this.apiKey = '0f4743056ece4e74bd0728235b3ed2e1.DyInYf9FR1pZe7tT';
+    this.model = 'glm-4-flash';
+  }
+
+  async getActions() {
+    const stateText = this.serializeState();
+    this.game.aiLog('info', '正在调用API...');
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+      const resp = await fetch(this.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + this.apiKey
+        },
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            { role: 'system', content: SYSTEM_PROMPT },
+            { role: 'user', content: '当前游戏状态：\n' + stateText + '\n请返回你的操作JSON。' }
+          ],
+          temperature: 0.7,
+          max_tokens: 1024
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (!resp.ok) {
+        const errText = await resp.text().catch(() => '');
+        this.game.aiLog('err', 'API错误 ' + resp.status + ': ' + errText.substring(0, 60));
+        throw new Error('API ' + resp.status);
+      }
+      const data = await resp.json();
+      const text = data.choices[0].message.content;
+      this.game.aiLog('info', 'AI回复: ' + text.substring(0, 80));
+      const act = this.parseActions(text);
+      if (!act || act.length === 0 || act[0].action === 'end_turn') {
+        throw new Error('AI返回end_turn或空，重试');
+      }
+      return act;
+    } catch (err) {
+      this.game.aiLog('err', '调用失败: ' + err.message);
+      return null;
+    }
+  }
+
+  serializeState() {
+    const g = this.game;
+    const pid = g.currentPlayer;
+    const p = g.players[pid];
+    let s = '第' + g.turn + '轮 | ' + p.name + '(玩家' + (pid+1) + ')的回合\n\n';
+
+    s += '=== 城池 ===\n';
+    for (const c of g.cities) {
+      const owner = c.owner !== null ? CONFIG.COLOR_NAMES[c.owner] : '无';
+      s += '[城' + c.id + '] (' + Math.round(c.x) + ',' + Math.round(c.y) + ') HP:' + c.hp + ' ' + owner;
+      if (c.hasEmperor) s += ' [皇帝]';
+      // 统计该城现有兵线数
+      const troopCount = g.troops.filter(t => {
+        if (t.hp <= 0 || t.owner !== c.owner) return false;
+        const first = t.points[0];
+        return Math.hypot(first.x - c.x, first.y - c.y) < 5;
+      }).length;
+      if (c.owner !== null) s += ' 兵线:' + troopCount + '/3';
+      const fac = g.factories.find(f => f.cityId === c.id && f.owner === c.owner);
+      if (fac) s += ' [工厂ID' + fac.id + ']';
+      s += '\n';
+    }
+
+    s += '\n=== 己方 (' + p.name + ') ===\n';
+    s += '皇帝城: ' + (p.emperorCityId !== null ? '城' + p.emperorCityId : '无') + '\n';
+    s += '城池: [' + p.cities.join(',') + '] \n';
+    s += '可出兵的城（兵线<3）: ';
+    const canDeployCities = g.cities.filter(c => {
+      if (c.owner !== pid || c.hp <= 0) return false;
+      const cnt = g.troops.filter(t => {
+        if (t.hp <= 0 || t.owner !== pid) return false;
+        return Math.hypot(t.points[0].x - c.x, t.points[0].y - c.y) < 5;
+      }).length;
+      return cnt < 3;
+    });
+    s += (canDeployCities.length > 0 ? canDeployCities.map(c => '城' + c.id + '(' + Math.round(c.x) + ',' + Math.round(c.y) + ')').join(', ') : '无') + '\n';
+
+    s += '兵线:\n';
+    g.troops.filter(t => t.owner === pid && t.hp > 0).forEach(t => {
+      const s0 = t.points[0], e0 = t.points[t.points.length - 1];
+      s += '  [' + t.type + '] HP:' + t.hp + ' ATK:' + t.atk + ' (' + Math.round(s0.x) + ',' + Math.round(s0.y) + ')->(' + Math.round(e0.x) + ',' + Math.round(e0.y) + ')\n';
+    });
+    const myFacs = g.factories.filter(f => f.owner === pid);
+    s += '工厂: ' + (myFacs.map(f => 'ID' + f.id + '(城' + f.cityId + ',坐标' + Math.round(f.x) + ',' + Math.round(f.y) + ')').join(', ') || '无') + '\n';
+    const myCannons = g.cannons.filter(c => c.owner === pid);
+    s += '大炮: ' + (myCannons.map(c => {
+      // 检查引线连接
+      const wire = g.wires.find(w => w.owner === pid && w.hp > 0 && w.points.length >= 2);
+      const hasWire = wire && Math.hypot(wire.points[0].x - myFacs[0]?.x, wire.points[0].y - myFacs[0]?.y) < 30;
+      return 'ID' + c.id + '(' + Math.round(c.x) + ',' + Math.round(c.y) + ')HP' + c.hp;
+    }).join(', ') || '无') + '\n';
+    s += '骑兵单位: ' + g.cavalryUnits.filter(c => c.owner === pid && !c.hasTroop).map(c => 'ID' + c.id + '(' + Math.round(c.spawnX) + ',' + Math.round(c.spawnY) + ')HP' + c.hp).join(', ') || '无\n';
+
+    s += '\n=== 敌方 ===\n';
+    for (let i = 0; i < g.players.length; i++) {
+      if (i === pid || !g.players[i].alive) continue;
+      const ep = g.players[i];
+      s += ep.name + ': ' + ep.cities.length + '城 ';
+      s += g.troops.filter(t => t.owner === i && t.hp > 0).length + '线 ';
+      s += g.factories.filter(f => f.owner === i).length + '厂 ';
+      s += g.cannons.filter(c => c.owner === i).length + '炮 ';
+      s += g.cavalryUnits.filter(c => c.owner === i).length + '骑\n';
+      g.cities.filter(c => c.owner === i).forEach(c => {
+        s += '  城' + c.id + '(' + Math.round(c.x) + ',' + Math.round(c.y) + ') HP:' + c.hp + (c.hasEmperor ? ' [皇帝]' : '') + '\n';
+      });
+      // 敌方兵线详情（帮助AI判断威胁）
+      const enemyTroops = g.troops.filter(t => t.owner === i && t.hp > 0);
+      if (enemyTroops.length > 0) {
+        s += '  敌方兵线: ';
+        s += enemyTroops.map(t => {
+          const e = t.points[t.points.length - 1];
+          return '[' + t.type + ']' + Math.round(e.x) + ',' + Math.round(e.y);
+        }).join(' | ');
+        s += '\n';
+      }
+    }
+
+    s += '\n=== 河流与桥梁 ===\n';
+    g.rivers.forEach(r => {
+      s += '河' + r.id + ': ' + (r.bridges || []).map(b => '桥(' + Math.round(b.x) + ',' + Math.round(b.y) + ')').join(' ') + '\n';
+    });
+
+    s += '\n=== 引线 ===\n';
+    g.wires.forEach(w => {
+      if (w.hp <= 0) return;
+      const s0 = w.points[0], e0 = w.points[w.points.length - 1];
+      s += '[' + CONFIG.COLOR_NAMES[w.owner] + '] (' + Math.round(s0.x) + ',' + Math.round(s0.y) + ')->(' + Math.round(e0.x) + ',' + Math.round(e0.y) + ') HP:' + w.hp + '\n';
+    });
+
+    return s;
+  }
+
+  parseActions(text) {
+    // 策略1: 找actions数组
+    const m1 = text.match(/"actions"\s*:\s*(\[[^\]]*\])/);
+    if (m1) {
+      const partial = '{' + m1[0] + '}';
+      try {
+        const d = JSON.parse(partial);
+        const v = this._validateActions(d.actions);
+        if (v) return v;
+      } catch(e) {}
+    }
+    // 策略2: 非贪婪整JSON
+    const m2 = text.match(/\{[\s\S]*?\}/);
+    if (m2) {
+      try {
+        const d = JSON.parse(m2[0]);
+        if (d.thinking) console.log('[AI]', d.thinking);
+        const v = this._validateActions(d.actions);
+        if (v) return v;
+      } catch(e) {}
+    }
+    // 策略3: 直接尝试解析整个文本（可能是纯JSON）
+    try {
+      const d = JSON.parse(text.trim());
+      if (d.thinking) console.log('[AI]', d.thinking);
+      const v = this._validateActions(d.actions);
+      if (v) return v;
+    } catch(e) {}
+    return null;
+  }
+
+  _validateActions(actions) {
+    if (!actions || !Array.isArray(actions) || actions.length === 0) return null;
+    // AI不允许end_turn
+    const noEnd = actions.filter(a => a && a.action !== 'end_turn');
+    if (noEnd.length === 0) return null;
+    const valid = ['deploy_troop', 'build_factory', 'build_cannon', 'place_cavalry',
+      'connect_wire', 'connect_supply', 'build_rope', 'build_dock', 'build_ship',
+      'move_emperor', 'burn_rope', 'cannon_attack'];
+    const filtered = noEnd.filter(a => valid.includes(a.action));
+    if (filtered.length === 0) return null;
+    // 每回合只返回一个action：优先deploy_troop，其次build操作
+    const deploy = filtered.find(a => a.action === 'deploy_troop');
+    if (deploy) return [deploy];
+    // 没有出兵指令，执行第一个build
+    return [filtered[0]];
+  }
+}
+
+// ==================== 启动 ====================
+const game = new Game();
+</script>
+
+<!-- 地图编辑器 -->
+<div id="mapEditorOverlay" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;z-index:2000;pointer-events:none;">
+  <div id="editHint" style="position:absolute;top:4px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.75);color:#fff;padding:3px 12px;border-radius:12px;font-size:11px;pointer-events:none;white-space:nowrap;">点击放置城池｜长按拖拽画河流/山</div>
+</div>
+
+</body>
+</html>
