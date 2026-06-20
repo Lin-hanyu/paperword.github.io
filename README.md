@@ -11,7 +11,7 @@
 | 📱 Android | 下载 `apk/` 目录下的 APK 安装包 |
 | 🌐 网页版 | 直接打开 `game.html` 即可游玩 |
 
-更多信息请访问 **[下载中心](https://你的用户名.github.io/仓库名)**。
+更多信息请访问 **[下载中心](https://lin-hanyu.github.io/paperword.github.io/)**。
 
 ## 项目结构
 
