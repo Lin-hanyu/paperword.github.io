@@ -86,36 +86,6 @@
       letter-spacing: 1px;
     }
 
-    /* ========== 游戏截图/装饰图 ========== */
-    .hero-image {
-      margin: 0 auto 40px;
-      width: 100%;
-      max-width: 500px;
-      aspect-ratio: 16 / 9;
-      border-radius: 12px;
-      overflow: hidden;
-      position: relative;
-      background: linear-gradient(135deg, #2a2040, #1a2a4e);
-      border: 1px solid rgba(255,215,140,0.15);
-    }
-    .hero-image .placeholder-content {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: rgba(255,215,140,0.4);
-      font-size: 14px;
-      letter-spacing: 2px;
-    }
-    .hero-image .placeholder-content svg {
-      width: 64px;
-      height: 64px;
-      margin-bottom: 12px;
-      opacity: 0.5;
-    }
-
     /* ========== 下载卡片区域 ========== */
     .download-grid {
       display: grid;
@@ -316,10 +286,9 @@
       opacity: 0;
     }
     .header       { animation-delay: 0.1s; }
-    .hero-image   { animation-delay: 0.2s; }
-    .download-grid { animation-delay: 0.3s; }
-    .instructions { animation-delay: 0.4s; }
-    .footer       { animation-delay: 0.5s; }
+    .download-grid { animation-delay: 0.2s; }
+    .instructions { animation-delay: 0.3s; }
+    .footer       { animation-delay: 0.4s; }
 
     /* ========== 响应式 ========== */
     @media (max-width: 640px) {
@@ -327,7 +296,6 @@
       .header .logo { font-size: 36px; letter-spacing: 4px; }
       .header .subtitle { font-size: 13px; letter-spacing: 2px; padding: 6px 16px; }
       .download-card { padding: 28px 18px 22px; }
-      .hero-image { max-width: 100%; }
     }
 
     /* ========== 下载计数 ========== */
@@ -351,29 +319,12 @@
   <!-- 标题 -->
   <header class="header">
     <div class="logo">纸上江山</div>
-    <div class="subtitle">局 域 网 联 机 战 棋</div>
+    <div class="subtitle">战 棋 对 弈</div>
     <div class="version-tag">最新版本 v1.3.2</div>
   </header>
 
   <!-- 装饰图片区域 -->
-  <div class="hero-image">
-    <div class="placeholder-content">
-      <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M8 8 L24 4 L40 8 L56 4 L56 56 L40 60 L24 56 L8 60 L8 8Z" />
-        <path d="M24 4 L24 56" opacity="0.4" />
-        <path d="M40 8 L40 60" opacity="0.4" />
-        <path d="M8 8 L56 4" opacity="0.3" />
-        <path d="M8 60 L56 56" opacity="0.3" />
-        <rect x="18" y="16" width="10" height="10" rx="1" opacity="0.3" />
-        <rect x="36" y="16" width="10" height="10" rx="1" opacity="0.3" />
-        <rect x="18" y="34" width="10" height="10" rx="1" opacity="0.3" />
-        <rect x="36" y="34" width="10" height="10" rx="1" opacity="0.3" />
-      </svg>
-      <span>战场示意图</span>
-    </div>
-    <!-- 如果你有游戏截图，可以替换上面的 placeholder-content 为：
-    <img src="screenshot.png" alt="纸上江山游戏截图" style="width:100%;height:100%;object-fit:cover;"> -->
-  </div>
+  <!-- 以后有游戏截图可以放这里 -->
 
   <!-- 下载卡片 -->
   <div class="download-grid">
@@ -387,7 +338,7 @@
         <span>格式: .apk</span>
         <span>版本: v1.3.2</span>
       </div>
-      <a class="btn-download apk" href="apk/纸上江山-v132.apk" download>
+      <a class="btn-download apk" href="纸上江山-v132.apk" download>
         下载 APK
         <span class="arrow">→</span>
       </a>
@@ -416,14 +367,13 @@
     <ul>
       <li><strong>Android 版</strong>：下载 APK 后，在手机上打开安装即可。若提示"未知来源"，请允许安装。</li>
       <li><strong>网页版</strong>：点击"打开网页版"即可在浏览器中直接游玩，支持电脑和手机浏览器。</li>
-      <li><strong>联机方法</strong>：所有设备连接同一个 WiFi 或局域网，即可进行多人对战。</li>
       <li><strong>反馈建议</strong>：如有问题或建议，欢迎在 GitHub 提交 Issue。</li>
     </ul>
   </div>
 
   <!-- Footer -->
   <div class="footer">
-    <a href="https://github.com/YOUR_USERNAME/YOUR_REPO" target="_blank">GitHub 仓库</a>
+    <a href="https://github.com/Lin-hanyu/paperword.github.io" target="_blank">GitHub 仓库</a>
     &nbsp;·&nbsp;
     纸上江山 &copy; 2026
     &nbsp;·&nbsp;
